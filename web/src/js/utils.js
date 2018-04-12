@@ -93,7 +93,6 @@ export function fetchApi(url, options={}) {
     if (url.startsWith("/")) {
         url = "." + url;
     }
-
     return fetch(url, {
         credentials: 'same-origin',
         ...options

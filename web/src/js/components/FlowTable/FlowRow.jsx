@@ -9,9 +9,10 @@ FlowRow.propTypes = {
     flow: PropTypes.object.isRequired,
     highlighted: PropTypes.bool,
     selected: PropTypes.bool,
+    matcher:PropTypes.object
 }
 
-function FlowRow({ flow, selected, highlighted, onSelect }) {
+function FlowRow({ flow, selected, highlighted, onSelect, matcher }) {
     const className = classnames({
         'selected': selected,
         'highlighted': highlighted,
@@ -19,11 +20,11 @@ function FlowRow({ flow, selected, highlighted, onSelect }) {
         'has-request': flow.request,
         'has-response': flow.response,
     })
-
+    console.log(matcher)
     return (
         <tr className={className} onClick={() => onSelect(flow.id)}>
             {columns.map(Column => (
-                <Column key={Column.name} flow={flow}/>
+                <Column key={Column.name} flow={flow} matcher={matcher}/>
             ))}
         </tr>
     )

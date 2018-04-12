@@ -8,12 +8,29 @@ The View:
 - Exposes a settings store for flows that automatically expires if the flow is
   removed from the store.
 """
+
+"""
+Cette classe représente l'objet qui va contenir l'ensemble des flux reçus par le proxy et envoyés sur l'interface webkit
+Cet objet n'est pas utilisé dans l'outil mitmproxy ou mitmdump, seulement dans mitmweb
+"""
 import collections
 import typing
 import os
-
+import re
 import blinker
 import sortedcontainers
+import copy
+
+
+#Ajouts
+#XPath
+from lxml import etree
+#JSONPath
+from jsonpath_rw import jsonpath, parse
+from urllib.parse import urlencode, parse_qs
+
+from mitmproxy.addons import core
+
 
 import mitmproxy.flow
 from mitmproxy import flowfilter
@@ -23,7 +40,7 @@ from mitmproxy import connections
 from mitmproxy import ctx
 from mitmproxy import io
 from mitmproxy import http  # noqa
-
+from mitmproxy.http import make_connect_response
 # The underlying sorted list implementation expects the sort key to be stable
 # for the lifetime of the object. However, if we sort by size, for instance,
 # the sort order changes as the flow progresses through its lifecycle. We
@@ -102,11 +119,30 @@ orders = [
     ("u", "url"),
     ("z", "size"),
 ]
-
+DEFAULTS_PATH = os.path.join(os.path.expanduser(core.CA_DIR), "defaults.txt")
+defaultMatchersFile = open(DEFAULTS_PATH,'r')
+fileContent = defaultMatchersFile.read()
+fileContent = fileContent.replace('\r', '').replace('\n', '')
+defaults = eval(fileContent)
 
 class View(collections.Sequence):
     def __init__(self):
         super().__init__()
+
+        """
+        Différents ajouts pour s'adapter à notre utilisation
+        scenarios -> Un dictionnaire stockant les scénarios et leur contenu (Flux et Matcher)
+        scenario -> Le scénario actuel, en cours
+        mock -> booléen représentant si le proxy est en mode bouchonnement
+        learning -> booléen représentant si le scénario est en cours d'ajouts de flux (En apprentissage)
+        """
+        self.scenarios = {}
+        self.scenario = ""
+        self.mock = False
+        self.learning = False
+        '''Définition des matchers par défaut'''
+
+
         self._store = collections.OrderedDict()
         self.filter = matchall
         # Should we show only marked flows?
@@ -133,6 +169,14 @@ class View(collections.Sequence):
         self.sig_view_remove = blinker.Signal()
         # Signals that the view should be refreshed completely
         self.sig_view_refresh = blinker.Signal()
+
+        """
+        Deux signaux ajoutés
+        Le premier est là pour un prochain ajout (Montrer en direct quels flux sont concernés par les regex / xpath)
+        Le deuxième est là pour envoyer la modification d'un matcher pour un flux donné, il est appelé au chargement d'un scénario
+        """
+        self.sig_view_highlight = blinker.Signal()
+        self.sig_view_matcher_update = blinker.Signal()
 
         # The sig_store* signals broadcast events that affect the underlying
         # store. If a flow is removed from just the view, sig_view_remove is
@@ -162,6 +206,10 @@ class View(collections.Sequence):
         loader.add_option(
             "console_focus_follow", bool, False,
             "Focus follows new flows."
+        )
+        loader.add_option(
+            "default_matcher_mode", str, "all",
+            "Default Matcher Mode (mb for MaBanque, all otherwise)"
         )
 
     def store_count(self):
@@ -419,7 +467,7 @@ class View(collections.Sequence):
                 del self._store[f.id]
                 self.sig_store_remove.send(self, flow=f)
         if len(flows) > 1:
-            ctx.log.alert("Removed %s flows" % len(flows))
+            print("Removed %s flows" % len(flows))
 
     @command.command("view.resolve")
     def resolve(self, spec: str) -> typing.Sequence[mitmproxy.flow.Flow]:
@@ -479,10 +527,78 @@ class View(collections.Sequence):
         if "console_focus_follow" in updated:
             self.focus_follow = ctx.options.console_focus_follow
 
-    def request(self, f):
-        self.add([f])
 
-    def error(self, f):
+    """
+    Fais partie de la partie de scripting de MITMPROXY
+    Cet objet étant un addon de mitmproxy, request() est un évènement qui va être appelé lorsqu'une requête entre dans le proxy
+    C'est dans cette méthode qu'on va ajouter un flux et un matcher à l'interface web et qu'on va regarder si on bouchonne ou non
+    """
+    def request(self, f):
+        #Si on bouchonne
+        self.default_matcher_mode = ctx.options.default_matcher_mode
+        if self.scenario != "":
+            if self.mock:
+                f.intercept()
+                print("******************** ON PASSE A LA REQUETE : " + f.request.pretty_url + "*********************************")
+                headers = f.request.headers
+                headers_m = f.request.headers.copy()
+                content_m = f.request.content.decode()
+                uri_m = f.request.pretty_url
+                try:
+                    cont_tree = etree.fromstring(f.request.content)
+                    content = cont_tree
+                except Exception as e:
+                    content = f.request.content.decode()
+                uri = f.request.pretty_url
+                if self.default_matcher_mode != "all":
+                    # ************** HEADERS *************
+                    for header in defaults[ctx.options.default_matcher_mode]['Headers']:
+                        headers_m.pop(header, None)
+                    # ************** CONTENT *************
+                    if isinstance(content,str):
+                        params = parse_qs(content)
+                        for contents in defaults[ctx.options.default_matcher_mode]['Content']:
+                            params.pop(contents, None)
+                        content_m = urlencode(params, True)
+                    else:
+                        content_m = copy.deepcopy(content)
+                        for contents in defaults[ctx.options.default_matcher_mode]['Content']:
+                            result = content_m.xpath("//"+contents)
+                            for res in result:
+                                parent = res.getparent()
+                                parent.remove(res)
+
+                    # ************** URIS *************
+                    for uris in defaults[ctx.options.default_matcher_mode]['URI']:
+                        if uris in uri:
+                            pass
+                            #base_uri = uri
+                #Pour chaque flux présent dans le scénario
+                for base_flow in self.scenarios[self.scenario][0]:
+                    if self.scenarios[self.scenario][1][base_flow.id].match(headers, content, uri, headers_m, content_m, uri_m):
+                        #On mocke
+                        f.response = base_flow.response
+                        self.sig_view_highlight.send(self, flow_id=base_flow.id)
+                        print("REQUETE MOCKEE")
+                        break
+            #Si on ne bouchonne pas, on ajoute le flux seulement si il y a un scénario en cours et qu'il est en cours
+            #d'apprentissage
+                f.resume()
+            elif self.learning:
+                #On ajoute le flux à l'interface web
+                self.add([f])
+                #On ajoute le flux au scénario actuel
+                self.addFlow(f)
+                #Si il y a un matcher particulier déjà présent pour ce flux, on l'indique à l'interface web
+                if f.id in self.scenarios[self.scenario][1].keys():
+                    self.matcher_update({f.id: self.scenarios[self.scenario][1][f.id].toDict()})
+
+    def http_connect(self, flow):
+        if flow.request.method == 'CONNECT' and self.mock:
+            # You may also selectively deny CONNECT request from certain IPs here.
+            flow.response = make_connect_response(flow.request.http_version)
+
+    def error(self,  f):
         self.update([f])
 
     def response(self, f):
@@ -496,6 +612,50 @@ class View(collections.Sequence):
 
     def kill(self, f):
         self.update([f])
+
+    """
+    Méthodes ajoutées pour modifier les scénarios
+    """
+
+    #Défini un nouveau scénario actuel
+    def setScen(self,scen):
+        self.scenario = scen
+
+    #Ajoute un flux au scénario
+    def addFlow(self,f: mitmproxy.flow.Flow):
+        self.scenarios[self.scenario][0].append(f)
+        if f.id not in self.scenarios[self.scenario][1]:
+            self.scenarios[self.scenario][1][f.id] = Matcher()
+
+    #Créer un nouveau matcher pour le flux du scénario
+    def newMatcher(self,id, matcher=""):
+        self.scenarios[self.scenario][1][id] = Matcher()
+        if matcher:
+            self.scenarios[self.scenario][1][id].fromDict(matcher)
+
+    #Ajoute un nouveau scénario
+    def addScen(self, scen):
+        self.scenarios[scen] = ([],{})
+
+    #Change l'état de bouchonnement
+    def switchMock(self):
+        self.mock = not self.mock
+        if self.mock:
+            for flow in self.scenarios[self.scenario][0]:
+                self.scenarios[self.scenario][1][flow.id].readyToMock(flow, self.default_matcher_mode)
+        else:
+            for flow in self.scenarios[self.scenario][0]:
+                if self.scenarios[self.scenario][1][flow.id].isDefault():
+                    self.scenarios[self.scenario][1][flow.id].reset()
+
+
+    #Change l'état d'apprentissage
+    def switchLearning(self):
+        self.learning = not self.learning
+
+    #Le signal de mise à jour d'un matcher
+    def matcher_update(self, m) -> None:
+        self.sig_view_matcher_update.send(self, matcher=m)
 
     def update(self, flows: typing.Sequence[mitmproxy.flow.Flow]) -> None:
         """
@@ -586,6 +746,7 @@ class Focus:
             self.flow = flow
 
 
+
 class Settings(collections.Mapping):
     def __init__(self, view: View) -> None:
         self.view = view
@@ -612,3 +773,142 @@ class Settings(collections.Mapping):
         for fid in list(self._values.keys()):
             if fid not in view._store:
                 del self._values[fid]
+
+def dict_compare(d1, d2):
+    d1_keys = set(d1.keys())
+    d2_keys = set(d2.keys())
+    intersect_keys = d1_keys.intersection(d2_keys)
+    added = d1_keys - d2_keys
+    removed = d2_keys - d1_keys
+    modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
+    same = set(o for o in intersect_keys if d1[o] == d2[o])
+    return added, removed, modified, same
+
+class Found(Exception): pass
+
+
+"""
+La classe correspondant à un matcher d'un flux dans un scénario
+"""
+class Matcher():
+    def __init__(self):
+        self.rules = {"Headers": [], "Content": [], "URI": []}
+
+    def addRule(self,label,dict):
+        self.rules[label].append(dict)
+
+    def setRule(self,label,dict,index):
+        self.rules[label][index] = dict
+
+    def deleteRule(self,label,index):
+        del self.rules[label][index]
+
+    def switchRules(self,label,ind1, ind2):
+        if ind1 != ind2 and ind1 > -1 and ind2 > -1 and ind1 < len(self.rules[label]) and ind2 < len(self.rules[label]):
+            self.rules[label][ind1], self.rules[label][ind2] = self.rules[label][ind2], self.rules[label][ind1]
+
+    def __str__(self):
+        return str(self.rules)
+
+    def toDict(self):
+        return self.rules
+
+    def fromDict(self, d):
+        self.rules = d.copy()
+
+    def isDefault(self):
+        empty = not (self.rules["Headers"] or self.rules["Content"] or self.rules["URI"])
+        default = not isinstance(self.rules["Content"],list) and not isinstance(self.rules["Headers"],list) and not isinstance(self.rules["URI"],list)
+        return empty or default
+
+    def readyToMock(self, flow, default_matcher_mode):
+        if self.isDefault():
+            self.rules["Headers"] = flow.request.headers.copy()
+            try:
+                cont_tree = etree.fromstring(flow.request.content)
+                self.rules["Content"] = cont_tree
+            except Exception as e:
+                self.rules["Content"] = flow.request.content.decode()
+            self.rules["URI"] = flow.request.pretty_url
+            if default_matcher_mode != "all":
+                for header in defaults[default_matcher_mode]['Headers']:
+                    self.rules["Headers"].pop(header, None)
+                for contents in defaults[default_matcher_mode]['Content']:
+                    if isinstance(self.rules["Content"],str):
+                        params = parse_qs(self.rules["Content"])
+                        params.pop(contents, None)
+                        self.rules["Content"] = urlencode(params, True)
+                    else:
+                        result = self.rules["Content"].xpath("//"+contents)
+                        for res in result:
+                            parent = res.getparent()
+                            parent.remove(res)
+                for uris in defaults[default_matcher_mode]['URI']:
+                    if uris in self.rules["URI"]:
+                        #base_uri = uri
+                        pass
+
+    def reset(self):
+        self.rules = {"Headers": [], "Content": [], "URI": []}
+
+    def match(self, headers, content, uri, headers_m, content_m, uri_m):
+        if self.isDefault():
+            if self.rules["Headers"] != headers_m or self.rules["URI"] != uri_m:
+                return False
+            if isinstance(self.rules["Content"],str):
+                if self.rules["Content"] != content_m:
+                    return False
+            elif etree.tostring(self.rules["Content"]) != etree.tostring(content_m):
+                return False
+        else:
+            for rule in self.rules["Headers"]:
+                inc_value = headers.pop(rule["Header"],None)
+                if inc_value is None:
+                    print("ERREUR HEADER : PAS LE HEADER DANS LA REQUETE ENTRANTE")
+                    return False
+                if not self.matchRule(rule, inc_value):
+                    print("ERREUR HEADER : LA VALEUR NE MATCH PAS")
+                    return False
+
+            for rule in self.rules["Content"]:
+                inc_value =  content
+                if not isinstance(inc_value,str):
+                    inc_value = etree.tostring(inc_value).decode()
+                if not self.matchRule(rule, inc_value):
+                    print("ERREUR CONTENT : LA VALEUR NE MATCH PAS")
+                    return False
+
+            for rule in self.rules["URI"]:
+                inc_value = uri
+                if not self.matchRule(rule, inc_value):
+                    print("ERREUR URI : LA VALEUR NE MATCH PAS")
+                    return False
+        return True
+
+    def matchRule(self, rule, inc_value):
+        no = rule["Condition"][-1] == 'n'
+        if rule["Condition"][0] == 'c':
+            if (rule["Value"] in inc_value) == no:
+                return False
+        elif rule["Condition"][0] == 'e':
+            if (rule["Value"] == inc_value) == no:
+                return False
+        elif rule["Condition"][0] == 'm':
+            pattern = re.compile(rule["Value"])
+            results = pattern.match(inc_value)
+            if (results is None) == no:
+                return False
+        elif rule["Condition"][0] == 'x':
+            try:
+                tree = etree.fromstring(inc_value)
+                result = tree.xpath(rule["Value"])
+                if bool(result) == no:
+                    return False
+            except Exception as e:
+                try:
+                    jsonpath_expr = parse(rule["Value"])
+                    if (not jsonpath_expr.find(inc_value)) == no:
+                        return False
+                except Exception as exc:
+                    return False
+        return True

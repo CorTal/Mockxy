@@ -44,7 +44,6 @@ export default class WebsocketBackend {
     }
 
     onMessage(msg) {
-
         if (msg.cmd === CMD_RESET) {
             return this.fetchData(msg.resource)
         }
@@ -62,7 +61,6 @@ export default class WebsocketBackend {
         let queue = this.activeFetches[resource]
         delete this.activeFetches[resource]
         queue.forEach(msg => this.onMessage(msg))
-
         if(Object.keys(this.activeFetches).length === 0) {
             // We have fetched the last resource
             this.store.dispatch(connectionActions.connectionEstablished())

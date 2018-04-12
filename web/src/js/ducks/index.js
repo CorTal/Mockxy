@@ -5,6 +5,7 @@ import settings from "./settings"
 import ui from "./ui/index"
 import connection from "./connection"
 import options from './options'
+import edit from './edit'
 
 export default combineReducers({
     eventLog,
@@ -13,4 +14,5 @@ export default combineReducers({
     connection,
     ui,
     options,
+    edit
 })

@@ -4,16 +4,18 @@ import _ from 'lodash'
 
 import Nav from './FlowView/Nav'
 import { ErrorView as Error, Request, Response } from './FlowView/Messages'
+import Matching from './FlowView/Matching'
 import Details from './FlowView/Details'
 
 import { selectTab } from '../ducks/ui/flow'
 
-export const allTabs = { Request, Response, Error, Details }
+export const allTabs = { Request, Response, Error, Details, Matching }
 
-function FlowView({ flow, tabName, selectTab }) {
+function FlowView({ flow, matcher, tabName, selectTab }) {
 
     // only display available tab names
     const tabs = ['request', 'response', 'error'].filter(k => flow[k])
+    tabs.push('matching')
     tabs.push("details")
 
     if (tabs.indexOf(tabName) < 0) {
@@ -35,7 +37,7 @@ function FlowView({ flow, tabName, selectTab }) {
                 active={tabName}
                 onSelectTab={selectTab}
             />
-            <Tab flow={flow}/>
+          <Tab flow={flow} matcher={matcher}/>
         </div>
     )
 }
@@ -43,6 +45,7 @@ function FlowView({ flow, tabName, selectTab }) {
 export default connect(
     state => ({
         flow: state.flows.byId[state.flows.selected[0]],
+        matcher: state.flows.RuleById[state.flows.selected[0]],
         tabName: state.ui.flow.tab,
     }),
     {

@@ -5,7 +5,7 @@ from mitmproxy.net import tls
 
 
 CA_DIR = "~/.mitmproxy"
-LISTEN_PORT = 8080
+LISTEN_PORT = 3120
 
 
 class Options(optmanager.OptManager):
@@ -79,7 +79,7 @@ class Options(optmanager.OptManager):
             "Address to bind upstream requests to."
         )
         self.add_option(
-            "mode", str, "regular",
+            "mode", str, "upstream:http://127.0.0.1:3129",
             """
             Mode can be "regular", "transparent", "socks5", "reverse:SPEC",
             or "upstream:SPEC". For reverse and upstream proxy modes, SPEC

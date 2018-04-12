@@ -5,13 +5,14 @@ import classnames from 'classnames'
 import MainMenu from './Header/MainMenu'
 import OptionMenu from './Header/OptionMenu'
 import FileMenu from './Header/FileMenu'
+import EditMenu from './Header/EditMenu'
 import FlowMenu from './Header/FlowMenu'
 import {setActiveMenu} from '../ducks/ui/header'
 import ConnectionIndicator from "./Header/ConnectionIndicator"
 import HideInStatic from './common/HideInStatic'
 
 class Header extends Component {
-    static entries = [MainMenu, OptionMenu]
+    static entries = [ EditMenu, OptionMenu]
 
     handleClick(active, e) {
         e.preventDefault()
@@ -22,12 +23,12 @@ class Header extends Component {
         const { selectedFlowId, activeMenu} = this.props
 
         let entries = [...Header.entries]
-        if(selectedFlowId)
-            entries.push(FlowMenu)
+        /*if(selectedFlowId)
+            entries.push(FlowMenu)*/
 
         // Make sure to have a fallback in case FlowMenu is selected but we don't have any flows
         // (e.g. because they are all deleted or not yet received)
-        const Active = _.find(entries, (e) => e.title == activeMenu) || MainMenu
+        const Active = _.find(entries, (e) => e.title == activeMenu) || EditMenu
 
         return (
             <header>

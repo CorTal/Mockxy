@@ -41,7 +41,7 @@ export default function Nav({ active, tabs, onSelectTab }) {
                         event.preventDefault()
                         onSelectTab(tab)
                     }}>
-                    {_.capitalize(tab)}
+                    {tab}
                 </a>
             ))}
         </nav>

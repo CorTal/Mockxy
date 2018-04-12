@@ -16,14 +16,15 @@ import { logger } from 'redux-logger'
 const middlewares = [thunk];
 
 if (process.env.NODE_ENV !== 'production') {
-  middlewares.push(logger);
+  middlewares.push(logger);                   //Ajoute le logger dans les middleware
 }
 
 // logger must be last
-const store = createStore(
+const store = createStore(                    //Redux
     rootReducer,
     applyMiddleware(...middlewares)
 )
+
 
 useUrlState(store)
 if (MITMWEB_STATIC) {

@@ -28,10 +28,11 @@ SettingsToggle.propTypes = {
     children: PropTypes.node.isRequired,
 }
 
+// we don't have settings initially, so just pass false.
 export function SettingsToggle({ setting, children, settings, updateSettings }) {
     return (
         <MenuToggle
-            value={settings[setting] || false} // we don't have settings initially, so just pass false.
+            value={settings[setting] || false}
             onChange={() => updateSettings({ [setting]: !settings[setting] })}
         >
             {children}
@@ -66,4 +67,3 @@ EventlogToggle = connect(
         toggleVisibility,
     }
 )(EventlogToggle)
-

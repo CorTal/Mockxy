@@ -4,7 +4,7 @@ export const SET_ACTIVE_MENU = 'UI_SET_ACTIVE_MENU'
 
 
 const defaultState = {
-    activeMenu: 'Start',
+    activeMenu: 'Edit',
     isFlowSelected: false,
 }
 

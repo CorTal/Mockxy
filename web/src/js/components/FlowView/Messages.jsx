@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
+import ReactModal from 'react-modal'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import InputRange from 'react-input-range';
 
 
 import { RequestUtils, isValidHttpVersion, parseUrl } from '../../flow/utils.js'
@@ -10,11 +12,15 @@ import ContentViewOptions from '../ContentView/ContentViewOptions'
 import ValidateEditor from '../ValueEditor/ValidateEditor'
 import ValueEditor from '../ValueEditor/ValueEditor'
 import HideInStatic from '../common/HideInStatic'
+import Button from "../common/Button"
+import Input from "../common/Input"
 
 import Headers from './Headers'
-import { startEdit, updateEdit } from '../../ducks/ui/flow'
+import * as UIActions from '../../ducks/ui/flow'
 import * as FlowActions from '../../ducks/flows'
 import ToggleEdit from './ToggleEdit'
+import RuleTable from './RuleTable'
+
 
 function RequestLine({ flow, readonly, updateFlow }) {
     return (
@@ -73,11 +79,12 @@ function ResponseLine({ flow, readonly, updateFlow }) {
 const Message = connect(
     state => ({
         flow: state.ui.flow.modifiedFlow || state.flows.byId[state.flows.selected[0]],
-        isEdit: !!state.ui.flow.modifiedFlow,
+        isEdit: !!state.ui.flow.modifiedFlow
     }),
     {
-        updateFlow: updateEdit,
+        updateFlow: UIActions.updateEdit,
         uploadContent: FlowActions.uploadContent
+
     }
 )
 
@@ -123,6 +130,8 @@ export class Request extends Component {
 }
 
 Request = Message(Request)
+
+
 
 
 export class Response extends Component {

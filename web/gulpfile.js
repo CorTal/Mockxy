@@ -24,14 +24,15 @@ var buffer = require('vinyl-buffer');
 var source = require('vinyl-source-stream');
 var watchify = require('watchify');
 
-var vendor_packages = _.difference(
-    _.union(
-        _.keys(packagejs.dependencies),
-        conf.js.vendor_includes
+var vendor_packages = _.difference(         //La différence des dépendances souhaitées et exclues
+    _.union(                                //L'union des dépendances souhaitées
+        _.keys(packagejs.dependencies),     //Les dépendances de package .json
+        conf.js.vendor_includes             // Les dépendances inclues dans conf.js
     ),
-    conf.js.vendor_excludes
+    conf.js.vendor_excludes                 //Les dépendances exclues dans conf.js
 );
 
+//Si jamais y'a une erreur, on utilise le notify de gulp
 var handleError = {errorHandler: notify.onError("Error: <%= error.message %>")};
 
 /*
@@ -64,6 +65,7 @@ function fixLessSourceMaps(file) {
     return fixSourceMaps(file);
 }
 
+//Minify css
 function styles(files, dev){
     return gulp.src(files)
         .pipe(dev ? plumber(handleError) : gutil.noop())
@@ -130,6 +132,7 @@ function vendor_stream(dev) {
     });
     for (var vp of vendor_packages) {
         bundler.require(vp);
+        notify(vp);
     }
     return buildScript(bundler, "vendor.js", dev);
 }

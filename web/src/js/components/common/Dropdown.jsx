@@ -46,7 +46,7 @@ export default class Dropdown extends Component {
                     {text}
                 </a>
                 <ul className="dropdown-menu" role="menu">
-                    {children.map ( (item, i) =>  <li key={i}> {item} </li> )}
+                    <li key={0}> {children} </li>
                 </ul>
             </div>
         )

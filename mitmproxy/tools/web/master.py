@@ -26,6 +26,9 @@ class WebMaster(master.Master):
         self.view.sig_view_update.connect(self._sig_view_update)
         self.view.sig_view_refresh.connect(self._sig_view_refresh)
 
+        self.view.sig_view_highlight.connect(self._sig_view_highlight)
+        self.view.sig_view_matcher_update.connect(self._sig_view_matcher_update)
+
         self.events = eventstore.EventStore()
         self.events.sig_add.connect(self._sig_events_add)
         self.events.sig_refresh.connect(self._sig_events_refresh)
@@ -73,6 +76,20 @@ class WebMaster(master.Master):
         app.ClientConnection.broadcast(
             resource="flows",
             cmd="reset"
+        )
+
+    def _sig_view_highlight(self, view, flow_id):
+        app.ClientConnection.broadcast(
+            resource="flows",
+            cmd="highlight",
+            data=flow_id
+        )
+
+    def _sig_view_matcher_update(self, view, matcher):
+        app.ClientConnection.broadcast(
+            resource="matcher",
+            cmd="updater",
+            data=matcher
         )
 
     def _sig_events_add(self, event_store, entry: log.LogEntry):

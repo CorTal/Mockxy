@@ -87,8 +87,10 @@ setup(
         'dev': [
             "flake8>=3.5, <3.6",
             "Flask>=0.10.1, <0.13",
+            "lxml",
             "mypy>=0.580,<0.581",
             "pytest-asyncio>=0.8",
+            "jsonpath_rw",
             "pytest-cov>=2.5.1,<3",
             "pytest-faulthandler>=1.3.1,<2",
             "pytest-timeout>=1.2.1,<2",

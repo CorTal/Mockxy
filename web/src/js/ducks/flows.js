@@ -2,6 +2,7 @@ import { fetchApi } from "../utils"
 import reduceStore from "./utils/store"
 import * as storeActions from "./utils/store"
 import Filt from "../filt/filt"
+import {handleChange} from "./edit"
 import { RequestUtils } from "../flow/utils"
 
 export const ADD            = 'FLOWS_ADD'
@@ -13,6 +14,17 @@ export const SET_FILTER     = 'FLOWS_SET_FILTER'
 export const SET_SORT       = 'FLOWS_SET_SORT'
 export const SET_HIGHLIGHT  = 'FLOWS_SET_HIGHLIGHT'
 export const REQUEST_ACTION = 'FLOWS_REQUEST_ACTION'
+export const CHANGE         = 'FLOWS_CHANGE_SCEN'
+export const DELETE         = 'FLOWS_DELETE_SCEN'
+export const COPY           = 'FLOWS_COPY_SCEN'
+export const HIGHLIGHT      = 'FLOWS_HIGHLIGHT'
+export const MATCHER_UPDATE = 'MATCHER_UPDATER'
+export const RULE_UPDATE    = 'RULE_UPDATE'
+export const RULE_UP        = 'RULE_UP'
+export const RULE_DOWN      = 'RULE_DOWN'
+export const RULE_DELETE    = 'RULE_DELETE'
+export const LEARNING_ACTION= 'LEARNING_ACTION'
+export const SWITCH_BOUCHON = 'SWITCH_BOUCHON'
 
 
 const defaultState = {
@@ -61,6 +73,43 @@ export default function reduce(state = defaultState, action) {
                 ...reduceStore(state, storeAction)
             }
 
+        case MATCHER_UPDATE:
+            let storedAction = storeActions[action.cmd](
+                action.data,
+                makeFilter(state.filter),
+                makeSort(state.sort)
+            )
+            return {
+                ...state,
+                ...reduceStore(state, storedAction)
+            }
+        case HIGHLIGHT:
+          return {
+              ...state,
+              highlight: action.data
+          }
+        case RULE_UPDATE:
+          return {
+            ...state,
+            ...reduceStore(state, storeActions.updateRule(action.id, action.rule))
+          }
+
+        case RULE_UP:
+          return {
+            ...state,
+            ...reduceStore(state,storeActions.upRule(action.label, action.index, action.id))
+          }
+        case RULE_DOWN:
+          return {
+            ...state,
+            ...reduceStore(state,storeActions.downRule(action.label, action.index, action.id))
+          }
+        case RULE_DELETE:
+          return {
+            ...state,
+            ...reduceStore(state,storeActions.deleteRule(action.label, action.index, action.id))
+          }
+
         case SET_FILTER:
             return {
                 ...state,
@@ -86,7 +135,27 @@ export default function reduce(state = defaultState, action) {
                 ...state,
                 selected: action.flowIds
             }
+        case CHANGE:
+            return {
+              ...state,
+              ...reduceStore(state, storeActions.change(action.scenario))
+            }
 
+        case DELETE:
+            return {
+              ...state,
+              ...reduceStore(state, storeActions.deleteScen(action.scenario))
+            }
+        case COPY:
+          return {
+            ...state,
+            ...reduceStore(state, storeActions.copyScen(action.scenario))
+          }
+        case SWITCH_BOUCHON:
+          return {
+            ...state,
+            highlight : null
+          }
         default:
             return state
     }
@@ -205,6 +274,44 @@ export function update(flow, data) {
     return dispatch => fetchApi.put(`/flows/${flow.id}`, data)
 }
 
+export function switchLearning(){
+  return dispatch => fetchApi(`/learn`, {method: 'POST'})
+}
+
+export function changeScenario(scenario) {
+  return dispatch => fetchApi(`/scenario/${scenario}`, {method: 'POST'})
+}
+
+export function removeScen(scenario) {
+  return dispatch => fetchApi(`/scenario/${scenario}/remove`, {method: 'POST'})
+}
+
+export function copyScen(scenario){
+  return dispatch => fetchApi(`/scenario/${scenario}/copy`, {method: 'POST'})
+}
+
+export function dispatchRule(flowId, rule){
+  return dispatch => fetchApi.put(`/flows/${flowId}/rule/update`, rule)
+}
+
+export function deleteRuleDis(flowId,label, index){
+  return dispatch => fetchApi(`/flows/${flowId}/rule/${label}/${index}/delete`, {method: 'POST'})
+}
+
+export function upRuleDis(flowId,label, index){
+  return dispatch => fetchApi(`/flows/${flowId}/rule/${label}/${index}/up`, {method: 'POST'})
+}
+
+export function downRuleDis(flowId,label, index){
+  return dispatch => fetchApi(`/flows/${flowId}/rule/${label}/${index}/down`, {method: 'POST'})
+}
+
+
+export function switchBouchonMode()
+{
+    return dispatch => fetchApi(`bouchon`, {method: 'POST'})
+}
+
 export function uploadContent(flow, file, type) {
     const body = new FormData()
     file       = new window.Blob([file], { type: 'plain/text' })
@@ -234,4 +341,33 @@ export function select(id) {
         type: SELECT,
         flowIds: id ? [id] : []
     }
+}
+
+export function selectTab(tab) {
+
+  return { type: CHANGE, scenario: tab}
+}
+
+export function deleteTab(tab) {
+  return { type: DELETE, scenario: tab}
+}
+
+export function copyTab(tab) {
+  return { type: COPY, scenario: tab}
+}
+
+export function updateRule(id, rule){
+  return { type: RULE_UPDATE, id, rule}
+}
+
+export function upRule(label, index, id, rulesLength){
+  return { type: RULE_UP, label, index, id, rulesLength}
+}
+
+export function downRule(label, index, id, rulesLength){
+  return { type: RULE_DOWN, label, index, id, rulesLength}
+}
+
+export function deleteRule(label, index, id, rulesLength){
+  return { type: RULE_DELETE, label, index, id, rulesLength}
 }

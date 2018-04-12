@@ -19,7 +19,7 @@ if platform.system() == "Windows":
     VENV_BIN = "Scripts"
     PYINSTALLER_ARGS = [
         # PyInstaller < 3.2 does not handle Python 3.5's ucrt correctly.
-        "-p", r"C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x86",
+        #"-p", r"C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x86",
     ]
 else:
     VENV_BIN = "bin"
@@ -70,7 +70,7 @@ TOOLS = [
     for tool in tools
 ]
 
-TAG = os.environ.get("TRAVIS_TAG", os.environ.get("APPVEYOR_REPO_TAG_NAME", None))
+'''TAG = os.environ.get("TRAVIS_TAG", os.environ.get("APPVEYOR_REPO_TAG_NAME", None))
 BRANCH = os.environ.get("TRAVIS_BRANCH", os.environ.get("APPVEYOR_REPO_BRANCH", None))
 if TAG:
     VERSION = TAG
@@ -83,7 +83,7 @@ else:
     sys.exit(0)
 
 
-print("BUILD VERSION=%s" % VERSION)
+print("BUILD VERSION=%s" % VERSION)'''
 
 
 def archive_name(bdist: str) -> str:
@@ -93,7 +93,7 @@ def archive_name(bdist: str) -> str:
         ext = "tar.gz"
     return "{project}-{version}-{platform}.{ext}".format(
         project=bdist,
-        version=VERSION,
+        version="VERSION",
         platform=PLATFORM_TAG,
         ext=ext
     )
@@ -209,8 +209,8 @@ def build():
                     )
                     executable = executable.replace("_main", "")
 
-                print("> %s --version" % executable)
-                print(subprocess.check_output([executable, "--version"]).decode())
+                #print("> %s --version" % executable)
+                #print(subprocess.check_output([executable, "--version"]).decode())
 
                 archive.add(executable, basename(executable))
         print("Packed {}.".format(archive_name(bdist)))

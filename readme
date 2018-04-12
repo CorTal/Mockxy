@@ -1,0 +1,8 @@
+Téléchargez le fichier compressé à :
+Vous trouverez dans ce fichier :
+- L'exécutable nommé "mitmweb"
+- Le certificat de mitmproxy à ajouter dans la keystore de la jvm
+- Un fichier "defaults.txt" définissant les matchers par défaut, à placer dans ~/.mitmproxy par défaut
+- Un fichier "config.yaml" définissant les options du proxy, à partir de la vous pourrez notamment modifier les ports d'écoutes
+
+Tout d'abord il faut installer le certificat dans la jvm, rendez vous donc dans 

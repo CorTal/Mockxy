@@ -1,9 +1,10 @@
 import React, { Component } from 'react'
 import classnames from 'classnames'
+import PropTypes from 'prop-types'
 import { RequestUtils, ResponseUtils } from '../../flow/utils.js'
 import { formatSize, formatTimeDelta } from '../../utils.js'
 
-export function TLSColumn({ flow }) {
+export function TLSColumn({ flow, matcher }) {
     return (
         <td className={classnames('col-tls', flow.request.scheme === 'https' ? 'col-tls-https' : 'col-tls-http')}></td>
     )
@@ -12,7 +13,7 @@ export function TLSColumn({ flow }) {
 TLSColumn.headerClass = 'col-tls'
 TLSColumn.headerName = ''
 
-export function IconColumn({ flow }) {
+export function IconColumn({ flow, matcher }) {
     return (
         <td className="col-icon">
             <div className={classnames('resource-icon', IconColumn.getIcon(flow))}></div>
@@ -53,7 +54,7 @@ IconColumn.getIcon = flow => {
     return 'resource-icon-plain'
 }
 
-export function PathColumn({ flow }) {
+export function PathColumn({ flow, matcher }) {
 
     let err;
     if(flow.error){
@@ -80,6 +81,23 @@ export function PathColumn({ flow }) {
 PathColumn.headerClass = 'col-path'
 PathColumn.headerName = 'Path'
 
+export function MatchingColumn({flow, matcher})
+{
+  return (  <td className='col-match'>{(matcher["Headers"].length > 0 || matcher["Content"].length > 0 || matcher["URI"].length  > 0) ? "Custom" : "Default"}</td> )
+}
+
+MatchingColumn.headerClass = 'col-match'
+MatchingColumn.headerName = 'Match'
+
+export function ResponseColumn({flow, matcher})
+{
+  return <td className='col-resp'>{flow.response && flow.response.reason}</td>
+}
+
+ResponseColumn.headerClass = 'col-resp'
+ResponseColumn.headerName = 'Response'
+
+/*
 export function MethodColumn({ flow }) {
     return (
         <td className="col-method">{flow.request.method}</td>
@@ -129,13 +147,15 @@ export function TimeColumn({ flow }) {
 
 TimeColumn.headerClass = 'col-time'
 TimeColumn.headerName = 'Time'
-
+*/
 export default [
     TLSColumn,
     IconColumn,
     PathColumn,
-    MethodColumn,
+    MatchingColumn,
+    ResponseColumn
+    /*MethodColumn,
     StatusColumn,
     SizeColumn,
-    TimeColumn,
+    TimeColumn,*/
 ]
