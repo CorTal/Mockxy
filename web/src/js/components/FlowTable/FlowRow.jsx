@@ -12,7 +12,7 @@ FlowRow.propTypes = {
     matcher:PropTypes.object
 }
 
-function FlowRow({ flow, selected, highlighted, onSelect, matcher }) {
+function FlowRow({ flow, selected, highlighted, onSelect, matcher, index }) {
     const className = classnames({
         'selected': selected,
         'highlighted': highlighted,
@@ -20,11 +20,10 @@ function FlowRow({ flow, selected, highlighted, onSelect, matcher }) {
         'has-request': flow.request,
         'has-response': flow.response,
     })
-    console.log(matcher)
     return (
         <tr className={className} onClick={() => onSelect(flow.id)}>
             {columns.map(Column => (
-                <Column key={Column.name} flow={flow} matcher={matcher}/>
+                <Column key={Column.name} flow={flow} matcher={matcher} index={index}/>
             ))}
         </tr>
     )

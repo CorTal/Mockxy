@@ -26,6 +26,7 @@ Edit.propTypes = {
 }
 
 function Edit({ content, onChange }) {
+    console.log(onChange)
     return <CodeEditor content={content} onChange={onChange}/>
 }
 Edit = withContentLoader(Edit)

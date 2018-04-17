@@ -1,10 +1,21 @@
 import React, { Component } from 'react'
 import classnames from 'classnames'
 import PropTypes from 'prop-types'
+import XPath from 'xpath'
 import { RequestUtils, ResponseUtils } from '../../flow/utils.js'
 import { formatSize, formatTimeDelta } from '../../utils.js'
 
-export function TLSColumn({ flow, matcher }) {
+
+export function IndexColumn({flow, matcher, index}){
+  return (
+    <td className={classnames('col-index')}>{index}</td>
+  )
+}
+
+IndexColumn.headerClass = 'col-index'
+IndexColumn.headerName = 'Index'
+
+export function TLSColumn({ flow, matcher, index }) {
     return (
         <td className={classnames('col-tls', flow.request.scheme === 'https' ? 'col-tls-https' : 'col-tls-http')}></td>
     )
@@ -13,7 +24,7 @@ export function TLSColumn({ flow, matcher }) {
 TLSColumn.headerClass = 'col-tls'
 TLSColumn.headerName = ''
 
-export function IconColumn({ flow, matcher }) {
+export function IconColumn({ flow, matcher, index }) {
     return (
         <td className="col-icon">
             <div className={classnames('resource-icon', IconColumn.getIcon(flow))}></div>
@@ -54,7 +65,7 @@ IconColumn.getIcon = flow => {
     return 'resource-icon-plain'
 }
 
-export function PathColumn({ flow, matcher }) {
+export function PathColumn({ flow, matcher, index }) {
 
     let err;
     if(flow.error){
@@ -81,7 +92,15 @@ export function PathColumn({ flow, matcher }) {
 PathColumn.headerClass = 'col-path'
 PathColumn.headerName = 'Path'
 
-export function MatchingColumn({flow, matcher})
+export function LibelleColumn({flow, matcher, index}){
+
+  return ( <td className='col-libelle'>{flow.request.libelle ? flow.request.libelle : flow.request.path}</td>)
+}
+
+LibelleColumn.headerClass = 'col-libelle'
+LibelleColumn.headerName = 'Libellé'
+
+export function MatchingColumn({flow, matcher, index})
 {
   return (  <td className='col-match'>{(matcher["Headers"].length > 0 || matcher["Content"].length > 0 || matcher["URI"].length  > 0) ? "Custom" : "Default"}</td> )
 }
@@ -89,7 +108,7 @@ export function MatchingColumn({flow, matcher})
 MatchingColumn.headerClass = 'col-match'
 MatchingColumn.headerName = 'Match'
 
-export function ResponseColumn({flow, matcher})
+export function ResponseColumn({flow, matcher, index})
 {
   return <td className='col-resp'>{flow.response && flow.response.reason}</td>
 }
@@ -150,8 +169,10 @@ TimeColumn.headerName = 'Time'
 */
 export default [
     TLSColumn,
+    IndexColumn,
     IconColumn,
     PathColumn,
+    LibelleColumn,
     MatchingColumn,
     ResponseColumn
     /*MethodColumn,

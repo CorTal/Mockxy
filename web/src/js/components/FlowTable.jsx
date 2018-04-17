@@ -19,7 +19,8 @@ class FlowTable extends React.Component {
         rowHeight: PropTypes.number,
         highlight: PropTypes.string,
         selected: PropTypes.object,
-        matcher: PropTypes.object
+        matcher: PropTypes.object,
+        index: PropTypes.object
     }
 
     static defaultProps = {
@@ -94,7 +95,7 @@ class FlowTable extends React.Component {
 
     render() {
         const { vScroll, viewportTop } = this.state
-        const { flows, selected, highlight, matcher } = this.props
+        const { flows, selected, highlight, matcher, index } = this.props
 
         return (
             <div className="flow-table" onScroll={this.onViewportUpdate}>
@@ -112,6 +113,7 @@ class FlowTable extends React.Component {
                                 highlighted={flow.id === highlight}
                                 onSelect={this.props.selectFlow}
                                 matcher={matcher[flow.id]}
+                                index={index[flow.id]}
                             />
                         ))}
                         <tr style={{ height: vScroll.paddingBottom }}></tr>
@@ -129,7 +131,8 @@ export default connect(
         flows: state.flows.view,
         highlight: state.flows.highlight,
         selected: state.flows.byId[state.flows.selected[0]],
-        matcher: state.flows.RuleById
+        matcher: state.flows.RuleById,
+        index: state.flows.listIndex
     }),
     {
         selectFlow: flowsActions.select,
