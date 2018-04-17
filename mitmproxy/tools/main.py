@@ -67,7 +67,7 @@ def run(
         make_parser: typing.Callable[[options.Options], argparse.ArgumentParser],
         arguments: typing.Sequence[str],
         extra: typing.Callable[[typing.Any], dict] = None
-):  # pragma: no cover
+) -> master.Master:  # pragma: no cover
     """
         extra: Extra argument processing callable which returns a dict of
         options.
@@ -92,7 +92,7 @@ def run(
     try:
         unknown = optmanager.load_paths(opts, args.conf)
         pconf = process_options(parser, opts, args)
-        server = None  # type: typing.Any
+        server: typing.Any = None
         if pconf.options.server:
             try:
                 server = proxy.server.ProxyServer(pconf)
@@ -121,7 +121,11 @@ def run(
         signal.signal(signal.SIGTERM, cleankill)
         loop = asyncio.get_event_loop()
         for signame in ('SIGINT', 'SIGTERM'):
-            loop.add_signal_handler(getattr(signal, signame), master.shutdown)
+            try:
+                loop.add_signal_handler(getattr(signal, signame), master.shutdown)
+            except NotImplementedError:
+                # Not supported on Windows
+                pass
         master.run()
     except exceptions.OptionsError as e:
         print("%s: %s" % (sys.argv[0], e), file=sys.stderr)
@@ -131,35 +135,37 @@ def run(
     return master
 
 
-def mitmproxy(args=None):  # pragma: no cover
+def mitmproxy(args=None) -> typing.Optional[int]:  # pragma: no cover
     if os.name == "nt":
         print("Error: mitmproxy's console interface is not supported on Windows. "
               "You can run mitmdump or mitmweb instead.", file=sys.stderr)
-        sys.exit(1)
-
+        return 1
     assert_utf8_env()
-
     from mitmproxy.tools import console
     run(console.master.ConsoleMaster, cmdline.mitmproxy, args)
+    return None
 
 
-def mitmdump(args=None):  # pragma: no cover
+def mitmdump(args=None) -> typing.Optional[int]:  # pragma: no cover
     from mitmproxy.tools import dump
 
     def extra(args):
         if args.filter_args:
             v = " ".join(args.filter_args)
             return dict(
-                view_filter=v,
                 save_stream_filter=v,
+                readfile_filter=v,
+                dumper_filter=v,
             )
         return {}
 
     m = run(dump.DumpMaster, cmdline.mitmdump, args, extra)
-    if m and m.errorcheck.has_errored:
-        sys.exit(1)
+    if m and m.errorcheck.has_errored:  # type: ignore
+        return 1
+    return None
 
 
-def mitmweb(args=None):  # pragma: no cover
+def mitmweb(args=None) -> typing.Optional[int]:  # pragma: no cover
     from mitmproxy.tools import web
     run(web.master.WebMaster, cmdline.mitmweb, args)
+    return None
