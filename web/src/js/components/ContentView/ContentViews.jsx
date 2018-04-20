@@ -26,7 +26,7 @@ Edit.propTypes = {
 }
 
 function Edit({ content, onChange }) {
-    console.log(onChange)
+    console.log(content)
     return <CodeEditor content={content} onChange={onChange}/>
 }
 Edit = withContentLoader(Edit)
@@ -51,11 +51,12 @@ export class PureViewServer extends Component {
 
     setContentView(props){
         try {
+            console.log(props.content)
             this.data = JSON.parse(props.content)
+            console.log(this.data)
         }catch(err) {
             this.data = {lines: [], description: err.message}
         }
-
         props.setContentViewDescription(props.contentView != this.data.description ? this.data.description : '')
         props.setContent(this.data.lines)
     }
@@ -63,6 +64,7 @@ export class PureViewServer extends Component {
     render() {
         const {content, contentView, message, maxLines} = this.props
         let lines = this.props.showFullContent ? this.data.lines : this.data.lines.slice(0, maxLines)
+        console.log(lines)
         return (
             <div>
                 {ViewImage.matches(message) && <ViewImage {...this.props} />}

@@ -2,6 +2,7 @@ import { fetchApi } from "../utils"
 import reduceStore from "./utils/store"
 import * as storeActions from "./utils/store"
 import Filt from "../filt/filt"
+import vkbeautify from 'vkbeautify'
 import {handleChange} from "./edit"
 import { RequestUtils } from "../flow/utils"
 
@@ -181,6 +182,7 @@ const sortKeyFuns = {
         }
         return total
     },
+
 }
 
 export function makeFilter(filter) {

@@ -100,7 +100,6 @@ export default function reducer(state = defaultState, action) {
           if(state.selectedMatcher[action.label] > 0) state.selectedMatcher[action.label] = state.selectedMatcher[action.label]-1
           return {...state}
         case flowsActions.RULE_DOWN:
-          console.log(action.rulesLength-1)
           if(state.selectedMatcher[action.label] < action.rulesLength-1) state.selectedMatcher[action.label] = state.selectedMatcher[action.label]+1
           return {...state}
         case flowsActions.RULE_DELETE:
@@ -280,8 +279,6 @@ export function editRule(rules, index, matcher){
 }
 
 export function validateRule(id, rule){
-  console.log(id)
-  console.log(rule)
   return flowsActions.updateRule(id, rule)
 }
 

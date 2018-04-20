@@ -3,7 +3,7 @@ import ReactModal from 'react-modal'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import InputRange from 'react-input-range';
-
+import vkbeautify from 'vkbeautify'
 
 import { RequestUtils, isValidHttpVersion, parseUrl } from '../../flow/utils.js'
 import { formatTimeStamp } from '../../utils.js'
@@ -110,7 +110,7 @@ export class Request extends Component {
                     <ContentView
                         readonly={!isEdit}
                         flow={flow}
-                        onContentChange={content => updateFlow({ request: {content}})}
+                        onContentChange={content => {vkbeautify.xmlmin(content);updateFlow({ request: {content}})}}
                         message={flow.request}/>
                 </article>
                 <HideInStatic>
