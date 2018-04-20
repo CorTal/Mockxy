@@ -3,10 +3,8 @@ import json
 import logging
 import os.path
 import re
-from itertools import chain
 from io import BytesIO
 import asyncio
-import pprint
 
 import mitmproxy.flow
 import tornado.escape
@@ -160,25 +158,8 @@ class RequestHandler(tornado.web.RequestHandler):
         return self.application.master
 
     @property
-    def scenarios(self):
-        return self.application.master.view.scenarios
-
-    @property
-    def scenario(self):
-        return self.application.master.view.scenario
-
-    @property
-    def mock(self):
-        return self.application.master.view.mock
-
-    @property
-    def learning(self):
-        return self.application.master.view.learning
-
-    @property
     def flow(self) -> mitmproxy.flow.Flow:
         flow_id = str(self.path_kwargs["flow_id"])
-
         # FIXME: Add a facility to addon.view to safely access the store
         flow = self.view.get_by_id(flow_id)
         if flow:
@@ -231,118 +212,30 @@ class WebSocketEventBroadcaster(tornado.websocket.WebSocketHandler):
 class ClientConnection(WebSocketEventBroadcaster):
     connections: set = set()
 
-class Scenario(RequestHandler):
-    def post(self, scenario):
-        if not scenario in self.scenarios:
-            self.view.addScen(scenario)
-        self.view.setScen(scenario)
-
-class DeleteScenario(RequestHandler):
-    def post(self, scenario):
-        keys = list(self.scenarios.keys())
-        index = keys.index(scenario)
-        if(len(keys) == 1):
-            self.master.view.setScen("")
-        else:
-            self.master.view.setScen(keys[index-1]) if index else self.master.view.setScen(keys[index+1])
-
-        self.view.remove(self.scenarios[scenario][0])
-        self.scenarios.pop(scenario)
-
-class CopyScenario(RequestHandler):
-    def post(self, scenario):
-        self.scenarios[scenario] = self.scenarios[self.scenario]
-        del self.scenarios[self.scenario]
-        self.master.view.setScen(scenario)
-
-class SwitchBouchonMode(RequestHandler):
-    def post(self):
-        self.master.view.switchMock()
-
-class SwitchLearning(RequestHandler):
-    def post(self):
-        self.master.view.switchLearning()
-
-class RuleHandler(RequestHandler):
-    def delete(self, flow_id):
-        if self.flow.killable:
-            self.flow.kill()
-        self.view.remove([self.flow])
-
-    def put(self, flow_id):
-        tmpdict = self.json.copy()
-        index = tmpdict.pop('Index')
-        label = tmpdict.pop('Label')
-        if index == -1:
-            self.scenarios[self.scenario][1][flow_id].addRule(label,tmpdict)
-        else:
-            self.scenarios[self.scenario][1][flow_id].setRule(label,tmpdict,index)
-
-class RuleUp(RequestHandler):
-    def post(self, flow_id, label, index):
-        self.scenarios[self.scenario][1][flow_id].switchRules(label,int(index),int(index)-1)
-
-class RuleDown(RequestHandler):
-    def post(self, flow_id, label, index):
-        self.scenarios[self.scenario][1][flow_id].switchRules(label,int(index),int(index)+1)
-
-class RuleDelete(RequestHandler):
-    def post(self, flow_id, label, index):
-        self.scenarios[self.scenario][1][flow_id].deleteRule(label,int(index))
 
 class Flows(RequestHandler):
     def get(self):
-        dic = {}
-        li = []
-        for f in self.view:
-            dic = flow_to_json(f)
-            for i in self.scenarios.keys():
-                if f in self.scenarios[i][0]:
-                    dic["scenario"] = i
-            r = {'Headers': [], 'Content': [], 'URI': []}
-            if "scenario" in dic:
-                r = self.scenarios[dic["scenario"]][1][f.id].toDict()
-            li.append((dic,r))
-        if self.scenario != "":
-            li.append(self.scenario)
-
-        if self.view.mock:
-            self.view.switchMock()
-        if self.view.learning:
-            self.view.switchLearning()
-        self.write(li)
-        #self.write([flow_to_json(f) for f in self.view])
+        self.write([flow_to_json(f) for f in self.view])
 
 
 class DumpFlows(RequestHandler):
     def get(self):
-        self.set_header("Content-Disposition", "attachment; filename=" + self.scenario + ".fl")
+        self.set_header("Content-Disposition", "attachment; filename=flows")
         self.set_header("Content-Type", "application/octet-stream")
 
         bio = BytesIO()
         fw = io.FlowWriter(bio)
-        bio.write(bytes("{",'UTF-8'))
-        for id, m in self.scenarios[self.scenario][1].items():
-            bio.write(bytes("'" + id + "'" + ": " + str(m) + ", ",'UTF-8'))
-        bio.write(bytes("} \n",'UTF-8'))
-        for f in self.scenarios[self.scenario][0]:
+        for f in self.view:
             fw.add(f)
+
         self.write(bio.getvalue())
         bio.close()
 
     def post(self):
-        if(not self.learning):
-            self.master.view.switchLearning()
-        if self.scenario:
-            self.view.remove(self.scenarios[self.scenario][0])
-        self.scenarios[self.scenario] = ([],{})
+        self.view.clear()
         bio = BytesIO(self.filecontents)
-        matchers = eval(bio.readline().decode())
-        for id, matcher in matchers.items():
-            self.view.newMatcher(id, matcher)
         for i in io.FlowReader(bio).stream():
-            asyncio.call_soon(self.master.load_flow, i)
-
+            asyncio.ensure_future(self.master.load_flow(i))
         bio.close()
 
 
@@ -384,11 +277,7 @@ class FlowHandler(RequestHandler):
     def delete(self, flow_id):
         if self.flow.killable:
             self.flow.kill()
-        self.scenarios[self.scenario][0].remove(self.flow)
-        self.scenarios[self.scenario][1].pop(self.flow.id,None)
         self.view.remove([self.flow])
-
-
 
     def put(self, flow_id):
         flow = self.flow
@@ -438,7 +327,6 @@ class DuplicateFlow(RequestHandler):
     def post(self, flow_id):
         f = self.flow.copy()
         self.view.add([f])
-        self.view.addFlow(f)
         self.write(f.id)
 
 
@@ -594,21 +482,13 @@ class Application(tornado.web.Application):
             (r"/flows/(?P<flow_id>[0-9a-f\-]+)/replay", ReplayFlow),
             (r"/flows/(?P<flow_id>[0-9a-f\-]+)/revert", RevertFlow),
             (r"/flows/(?P<flow_id>[0-9a-f\-]+)/(?P<message>request|response)/content.data", FlowContent),
-            (r"/flows/(?P<flow_id>[0-9a-f\-]+)/(?P<message>request|response)/content/(?P<content_view>[0-9a-zA-Z\-\_]+)(?:\.json)?"
-             ,FlowContentView),
-            (r"/flows/(?P<flow_id>[0-9a-f\-]+)/rule/update", RuleHandler),
-            (r"/flows/(?P<flow_id>[0-9a-f\-]+)/rule/(?P<label>[A-Z][a-z]+)/(?P<index>[0-9]+)/up", RuleUp),
-            (r"/flows/(?P<flow_id>[0-9a-f\-]+)/rule/(?P<label>[A-Z][a-z]+)/(?P<index>[0-9]+)/down", RuleDown),
-            (r"/flows/(?P<flow_id>[0-9a-f\-]+)/rule/(?P<label>[A-Z][a-z]+)/(?P<index>[0-9]+)/delete", RuleDelete),
+            (
+                r"/flows/(?P<flow_id>[0-9a-f\-]+)/(?P<message>request|response)/content/(?P<content_view>[0-9a-zA-Z\-\_]+)(?:\.json)?",
+                FlowContentView),
             (r"/settings(?:\.json)?", Settings),
             (r"/clear", ClearAll),
             (r"/options(?:\.json)?", Options),
-            (r"/options/save", SaveOptions),
-            (r"/scenario/(?P<scenario>[^\/]*)", Scenario),
-            (r"/scenario/(?P<scenario>[^\/]*)/remove", DeleteScenario),
-            (r"/scenario/(?P<scenario>[^\/]*)/copy", CopyScenario),
-            (r"/bouchon", SwitchBouchonMode),
-            (r"/learn", SwitchLearning)
+            (r"/options/save", SaveOptions)
         ]
         settings = dict(
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
