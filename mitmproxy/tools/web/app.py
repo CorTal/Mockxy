@@ -309,7 +309,7 @@ class Flows(RequestHandler):
                 if f in self.scenarios[i][0]:
                     dic["scenario"] = i
             r = {'Headers': [], 'Content': [], 'URI': []}
-            if "scenario" in dic:
+            if "scenario" in dic and not self.scenarios[dic["scenario"]][1][f.id].isDefault():
                 r = self.scenarios[dic["scenario"]][1][f.id].toDict()
             li.append((dic,r))
         if self.scenario != "":
