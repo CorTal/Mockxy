@@ -67,8 +67,10 @@ setup(
         "cryptography>=2.1.4,<2.3",
         "h2>=3.0.1,<4",
         "hyperframe>=5.1.0,<6",
+        "jsonpath_rw",
         "kaitaistruct>=0.7,<0.9",
         "ldap3>=2.5,<2.6",
+        "lxml"
         "passlib>=1.6.5, <1.8",
         "pyasn1>=0.3.1,<0.5",
         "pyOpenSSL>=17.5,<17.6",

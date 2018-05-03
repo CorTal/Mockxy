@@ -119,11 +119,7 @@ orders = [
     ("u", "url"),
     ("z", "size"),
 ]
-DEFAULTS_PATH = os.path.join(os.path.expanduser(core.CA_DIR), "defaults.txt")
-defaultMatchersFile = open(DEFAULTS_PATH,'r')
-fileContent = defaultMatchersFile.read()
-fileContent = fileContent.replace('\r', '').replace('\n', '')
-defaults = eval(fileContent)
+
 
 class View(collections.Sequence):
     def __init__(self):
@@ -140,6 +136,7 @@ class View(collections.Sequence):
         self.scenario = ""
         self.mock = False
         self.learning = False
+        self.defaults = {}
         '''Définition des matchers par défaut'''
 
 
@@ -210,6 +207,10 @@ class View(collections.Sequence):
         loader.add_option(
             "default_matcher_mode", str, "all",
             "Default Matcher Mode (mb for MaBanque, all otherwise)"
+        )
+        loader.add_option(
+            "default_matcher_file", str, "~/.mitmproxy/defaults",
+            "Default Matcher File (~/.mitmproxy/defaults by default)"
         )
 
     def store_count(self):
@@ -526,6 +527,16 @@ class View(collections.Sequence):
             self.set_reversed(ctx.options.view_order_reversed)
         if "console_focus_follow" in updated:
             self.focus_follow = ctx.options.console_focus_follow
+        if "default_matcher_file" in updated:
+            try:
+                DEFAULTS_PATH = os.path.expanduser(ctx.options.default_matcher_file)
+                defaultMatchersFile = open(DEFAULTS_PATH,'r')
+                fileContent = defaultMatchersFile.read()
+                fileContent = fileContent.replace('\r', '').replace('\n', '')
+                self.defaults = eval(fileContent)
+            except:
+                self.default = {}
+
 
 
     """
@@ -534,8 +545,7 @@ class View(collections.Sequence):
     C'est dans cette méthode qu'on va ajouter un flux et un matcher à l'interface web et qu'on va regarder si on bouchonne ou non
     """
     def request(self, f):
-        #Si on bouchonne
-        self.default_matcher_mode = ctx.options.default_matcher_mode
+        #Si on bouchonn
         if self.scenario != "":
             if self.mock:
                 f.intercept()
@@ -550,26 +560,26 @@ class View(collections.Sequence):
                 except Exception as e:
                     content = f.request.content.decode()
                 uri = f.request.pretty_url
-                if self.default_matcher_mode != "all":
+                if self.default_matcher_mode != "all" and self.default_matcher_mode in self.defaults:
                     # ************** HEADERS *************
-                    for header in defaults[ctx.options.default_matcher_mode]['Headers']:
+                    for header in self.defaults[ctx.options.default_matcher_mode]['Headers']:
                         headers_m.pop(header, None)
                     # ************** CONTENT *************
                     if isinstance(content,str):
                         params = parse_qs(content)
-                        for contents in defaults[ctx.options.default_matcher_mode]['Content']:
+                        for contents in self.defaults[ctx.options.default_matcher_mode]['Content']:
                             params.pop(contents, None)
                         content_m = urlencode(params, True)
                     else:
                         content_m = copy.deepcopy(content)
-                        for contents in defaults[ctx.options.default_matcher_mode]['Content']:
+                        for contents in self.defaults[ctx.options.default_matcher_mode]['Content']:
                             result = content_m.xpath("//"+contents)
                             for res in result:
                                 parent = res.getparent()
                                 parent.remove(res)
 
                     # ************** URIS *************
-                    for uris in defaults[ctx.options.default_matcher_mode]['URI']:
+                    for uris in self.defaults[ctx.options.default_matcher_mode]['URI']:
                         if uris in uri:
                             pass
                             #base_uri = uri
@@ -830,10 +840,10 @@ class Matcher():
             except Exception as e:
                 self.rules["Content"] = flow.request.content.decode()
             self.rules["URI"] = flow.request.pretty_url
-            if default_matcher_mode != "all":
-                for header in defaults[default_matcher_mode]['Headers']:
+            if default_matcher_mode != "all" and default_matcher_mode in self.defaults:
+                for header in self.defaults[default_matcher_mode]['Headers']:
                     self.rules["Headers"].pop(header, None)
-                for contents in defaults[default_matcher_mode]['Content']:
+                for contents in self.defaults[default_matcher_mode]['Content']:
                     if isinstance(self.rules["Content"],str):
                         params = parse_qs(self.rules["Content"])
                         params.pop(contents, None)
@@ -843,7 +853,7 @@ class Matcher():
                         for res in result:
                             parent = res.getparent()
                             parent.remove(res)
-                for uris in defaults[default_matcher_mode]['URI']:
+                for uris in self.defaults[default_matcher_mode]['URI']:
                     if uris in self.rules["URI"]:
                         #base_uri = uri
                         pass
