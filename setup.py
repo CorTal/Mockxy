@@ -70,7 +70,7 @@ setup(
         "jsonpath_rw",
         "kaitaistruct>=0.7,<0.9",
         "ldap3>=2.5,<2.6",
-        "lxml"
+        "lxml",
         "passlib>=1.6.5, <1.8",
         "pyasn1>=0.3.1,<0.5",
         "pyOpenSSL>=17.5,<17.6",
