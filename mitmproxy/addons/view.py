@@ -560,7 +560,7 @@ class View(collections.Sequence):
                 except Exception as e:
                     content = f.request.content.decode()
                 uri = f.request.pretty_url
-                if self.default_matcher_mode != "all" and self.default_matcher_mode in self.defaults:
+                if ctx.options.default_matcher_mode != "all" and ctx.options.default_matcher_mode in self.defaults:
                     # ************** HEADERS *************
                     for header in self.defaults[ctx.options.default_matcher_mode]['Headers']:
                         headers_m.pop(header, None)
@@ -652,7 +652,7 @@ class View(collections.Sequence):
         self.mock = not self.mock
         if self.mock:
             for flow in self.scenarios[self.scenario][0]:
-                self.scenarios[self.scenario][1][flow.id].readyToMock(flow, self.default_matcher_mode)
+                self.scenarios[self.scenario][1][flow.id].readyToMock(flow, ctx.options.default_matcher_mode)
         else:
             for flow in self.scenarios[self.scenario][0]:
                 if self.scenarios[self.scenario][1][flow.id].isDefault():
