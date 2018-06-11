@@ -1,4 +1,5 @@
 import os
+import errno
 import select
 import socket
 import sys
@@ -372,12 +373,11 @@ class TCPClient(_Connection):
         # Make sure to close the real socket, not the SSL proxy.
         # OpenSSL is really good at screwing up, i.e. when trying to recv from a failed connection,
         # it tries to renegotiate...
-        if not self.connection:
-            return
-        elif isinstance(self.connection, SSL.Connection):
-            close_socket(self.connection._socket)
-        else:
-            close_socket(self.connection)
+        if self.connection:
+            if isinstance(self.connection, SSL.Connection):
+                close_socket(self.connection._socket)
+            else:
+                close_socket(self.connection)
 
     def convert_to_tls(self, sni=None, alpn_protos=None, **sslctx_kwargs):
         context = tls.create_client_context(
@@ -586,6 +586,13 @@ class TCPServer:
         with self.handler_counter:
             try:
                 self.handle_client_connection(connection, client_address)
+            except OSError as e:  # pragma: no cover
+                # This catches situations where the underlying connection is
+                # closed beneath us. Syscalls on the connection object at this
+                # point returns EINVAL. If this happens, we close the socket and
+                # move on.
+                if not e.errno == errno.EINVAL:
+                    raise
             except:
                 self.handle_error(connection, client_address)
             finally:

@@ -35,9 +35,11 @@ def typename(t: type) -> str:
     """
         Translates a type to an explanatory string.
     """
+    if t == inspect._empty:  # type: ignore
+        raise exceptions.CommandError("missing type annotation")
     to = mitmproxy.types.CommandTypes.get(t, None)
     if not to:
-        raise NotImplementedError(t)
+        raise exceptions.CommandError("unsupported type: %s" % getattr(t, "__name__", t))
     return to.display
 
 
@@ -58,7 +60,12 @@ class Command:
             if i.kind == i.VAR_POSITIONAL:
                 self.has_positional = True
         self.paramtypes = [v.annotation for v in sig.parameters.values()]
-        self.returntype = sig.return_annotation
+        if sig.return_annotation == inspect._empty:  # type: ignore
+            self.returntype = None
+        else:
+            self.returntype = sig.return_annotation
+        # This fails with a CommandException if types are invalid
+        self.signature_help()
 
     def paramnames(self) -> typing.Sequence[str]:
         v = [typename(i) for i in self.paramtypes]
@@ -133,7 +140,12 @@ class CommandManager(mitmproxy.types._CommandBase):
                     pass  # hasattr may raise if o implements __getattr__.
                 else:
                     if is_command:
-                        self.add(o.command_path, o)
+                        try:
+                            self.add(o.command_path, o)
+                        except exceptions.CommandError as e:
+                            self.master.log.warn(
+                                "Could not load command %s: %s" % (o.command_path, e)
+                            )
 
     def add(self, path: str, func: typing.Callable):
         self.commands[path] = Command(self, path, func)
@@ -204,7 +216,15 @@ class CommandManager(mitmproxy.types._CommandBase):
 
         return parse, remhelp
 
-    def call_args(self, path: str, args: typing.Sequence[str]) -> typing.Any:
+    def call(self, path: str, *args: typing.Sequence[typing.Any]) -> typing.Any:
+        """
+            Call a command with native arguments. May raise CommandError.
+        """
+        if path not in self.commands:
+            raise exceptions.CommandError("Unknown command: %s" % path)
+        return self.commands[path].func(*args)
+
+    def call_strings(self, path: str, args: typing.Sequence[str]) -> typing.Any:
         """
             Call a command using a list of string arguments. May raise CommandError.
         """
@@ -212,14 +232,17 @@ class CommandManager(mitmproxy.types._CommandBase):
             raise exceptions.CommandError("Unknown command: %s" % path)
         return self.commands[path].call(args)
 
-    def call(self, cmdstr: str):
+    def execute(self, cmdstr: str):
         """
-            Call a command using a string. May raise CommandError.
+            Execute a command string. May raise CommandError.
         """
-        parts = list(lexer(cmdstr))
+        try:
+            parts = list(lexer(cmdstr))
+        except ValueError as e:
+            raise exceptions.CommandError("Command error: %s" % e)
         if not len(parts) >= 1:
             raise exceptions.CommandError("Invalid command: %s" % cmdstr)
-        return self.call_args(parts[0], parts[1:])
+        return self.call_strings(parts[0], parts[1:])
 
     def dump(self, out=sys.stdout) -> None:
         cmds = list(self.commands.values())

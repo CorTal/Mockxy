@@ -1,6 +1,5 @@
 import asyncio
 import io
-from unittest import mock
 
 import pytest
 import asynctest
@@ -42,7 +41,7 @@ def corrupt_data():
 class TestReadFile:
     def test_configure(self):
         rf = readfile.ReadFile()
-        with taddons.context() as tctx:
+        with taddons.context(rf) as tctx:
             tctx.configure(rf, readfile_filter="~q")
             with pytest.raises(Exception, match="Invalid readfile filter"):
                 tctx.configure(rf, readfile_filter="~~")
@@ -51,6 +50,8 @@ class TestReadFile:
     async def test_read(self, tmpdir, data, corrupt_data):
         rf = readfile.ReadFile()
         with taddons.context(rf) as tctx:
+            assert not rf.reading()
+
             tf = tmpdir.join("tfile")
 
             with asynctest.patch('mitmproxy.master.Master.load_flow') as mck:
@@ -108,8 +109,7 @@ class TestReadFileStdin:
                     await rf.load_flows(stdin.buffer)
 
     @pytest.mark.asyncio
-    @mock.patch('mitmproxy.master.Master.load_flow')
-    async def test_normal(self, load_flow, tmpdir, data):
+    async def test_normal(self, tmpdir, data):
         rf = readfile.ReadFileStdin()
         with taddons.context(rf) as tctx:
             tf = tmpdir.join("tfile")

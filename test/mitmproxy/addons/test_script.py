@@ -60,17 +60,6 @@ def test_load_fullname(tdata):
     assert not hasattr(ns2, "addons")
 
 
-@pytest.mark.asyncio
-async def test_script_print_stdout(tdata):
-    with taddons.context() as tctx:
-        with addonmanager.safecall():
-            ns = script.load_script(
-                tdata.path("mitmproxy/data/addonscripts/print.py")
-            )
-            ns.load(addonmanager.Loader(tctx.master))
-        assert await tctx.master.await_log("stdoutprint")
-
-
 class TestScript:
     def test_notfound(self):
         with taddons.context():
@@ -92,14 +81,13 @@ class TestScript:
 
     @pytest.mark.asyncio
     async def test_simple(self, tdata):
-        with taddons.context() as tctx:
-            sc = script.Script(
-                tdata.path(
-                    "mitmproxy/data/addonscripts/recorder/recorder.py"
-                ),
-                True,
-            )
-            tctx.master.addons.add(sc)
+        sc = script.Script(
+            tdata.path(
+                "mitmproxy/data/addonscripts/recorder/recorder.py"
+            ),
+            True,
+        )
+        with taddons.context(sc) as tctx:
             tctx.configure(sc)
             await tctx.master.await_log("recorder running")
             rec = tctx.master.addons.get("recorder")
@@ -185,16 +173,14 @@ class TestCutTraceback:
 class TestScriptLoader:
     @pytest.mark.asyncio
     async def test_script_run(self, tdata):
-        rp = tdata.path(
-            "mitmproxy/data/addonscripts/recorder/recorder.py"
-        )
+        rp = tdata.path("mitmproxy/data/addonscripts/recorder/recorder.py")
         sc = script.ScriptLoader()
         with taddons.context(sc) as tctx:
             sc.script_run([tflow.tflow(resp=True)], rp)
             await tctx.master.await_log("recorder response")
             debug = [i.msg for i in tctx.master.logs if i.level == "debug"]
             assert debug == [
-                'recorder load', 'recorder running', 'recorder configure',
+                'recorder running', 'recorder configure',
                 'recorder requestheaders', 'recorder request',
                 'recorder responseheaders', 'recorder response'
             ]
@@ -204,7 +190,7 @@ class TestScriptLoader:
         sc = script.ScriptLoader()
         with taddons.context(sc) as tctx:
             sc.script_run([tflow.tflow(resp=True)], "/")
-            assert await tctx.master.await_log("/: No such script")
+            assert await tctx.master.await_log("No such script")
 
     def test_simple(self, tdata):
         sc = script.ScriptLoader()
@@ -252,20 +238,6 @@ class TestScriptLoader:
             assert not tctx.options.scripts
             assert not sl.addons
 
-    def test_load_err(self, tdata):
-        sc = script.ScriptLoader()
-        with taddons.context(sc, loadcore=False) as tctx:
-            tctx.configure(sc, scripts=[
-                tdata.path("mitmproxy/data/addonscripts/load_error.py")
-            ])
-            try:
-                tctx.invoke(sc, "tick")
-            except ValueError:
-                pass  # this is expected and normally guarded.
-            # on the next tick we should not fail however.
-            tctx.invoke(sc, "tick")
-            assert len(tctx.master.addons) == 1
-
     @pytest.mark.asyncio
     async def test_script_error_handler(self):
         path = "/sample/path/example.py"
@@ -284,7 +256,7 @@ class TestScriptLoader:
         rec = tdata.path("mitmproxy/data/addonscripts/recorder")
         sc = script.ScriptLoader()
         sc.is_running = True
-        with taddons.context() as tctx:
+        with taddons.context(sc) as tctx:
             tctx.configure(
                 sc,
                 scripts = [
@@ -293,8 +265,7 @@ class TestScriptLoader:
                     "%s/c.py" % rec,
                 ]
             )
-            tctx.master.addons.invoke_addon(sc, "tick")
-            await tctx.master.await_log("c tick")
+            await tctx.master.await_log("configure")
             debug = [i.msg for i in tctx.master.logs if i.level == "debug"]
             assert debug == [
                 'a load',

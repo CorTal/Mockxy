@@ -8,13 +8,11 @@ from mitmproxy import addonmanager
 from mitmproxy import options
 from mitmproxy import controller
 from mitmproxy import eventsequence
-from mitmproxy import exceptions
 from mitmproxy import command
 from mitmproxy import http
 from mitmproxy import websocket
 from mitmproxy import log
 from mitmproxy.net import server_spec
-from mitmproxy.proxy.protocol import http_replay
 from mitmproxy.coretypes import basethread
 
 from . import ctx as mitmproxy_ctx
@@ -55,7 +53,6 @@ class Master:
         self.commands = command.CommandManager(self)
         self.addons = addonmanager.AddonManager(self)
         self._server = None
-        self.first_tick = True
         self.waiting_flows = []
         self.log = log.Log(self)
 
@@ -77,19 +74,12 @@ class Master:
         if self.server:
             ServerThread(self.server).start()
 
-    async def tick(self):
-        if self.first_tick:
-            self.first_tick = False
-            self.addons.trigger("running")
-        while True:
-            if self.should_exit.is_set():
-                return
-            self.addons.trigger("tick")
-            await asyncio.sleep(0.1)
+    async def running(self):
+        self.addons.trigger("running")
 
     def run_loop(self, loop):
         self.start()
-        asyncio.ensure_future(self.tick())
+        asyncio.ensure_future(self.running())
 
         exc = None
         try:
@@ -129,10 +119,7 @@ class Master:
         """
         if not self.should_exit.is_set():
             self.should_exit.set()
-            asyncio.run_coroutine_threadsafe(
-                self._shutdown(),
-                loop = self.channel.loop,
-            )
+            asyncio.run_coroutine_threadsafe(self._shutdown(), loop = self.channel.loop)
 
     def _change_reverse_host(self, f):
         """
@@ -164,58 +151,3 @@ class Master:
         f.reply = controller.DummyReply()
         for e, o in eventsequence.iterate(f):
             await self.addons.handle_lifecycle(e, o)
-
-    def replay_request(
-            self,
-            f: http.HTTPFlow,
-            block: bool=False
-    ) -> http_replay.RequestReplayThread:
-        """
-        Replay a HTTP request to receive a new response from the server.
-
-        Args:
-            f: The flow to replay.
-            block: If True, this function will wait for the replay to finish.
-                This causes a deadlock if activated in the main thread.
-
-        Returns:
-            The thread object doing the replay.
-
-        Raises:
-            exceptions.ReplayException, if the flow is in a state
-            where it is ineligible for replay.
-        """
-
-        if f.live:
-            raise exceptions.ReplayException(
-                "Can't replay live flow."
-            )
-        if f.intercepted:
-            raise exceptions.ReplayException(
-                "Can't replay intercepted flow."
-            )
-        if not f.request:
-            raise exceptions.ReplayException(
-                "Can't replay flow with missing request."
-            )
-        if f.request.raw_content is None:
-            raise exceptions.ReplayException(
-                "Can't replay flow with missing content."
-            )
-
-        f.backup()
-        f.request.is_replay = True
-
-        f.response = None
-        f.error = None
-
-        if f.request.http_version == "HTTP/2.0":  # https://github.com/mitmproxy/mitmproxy/issues/2197
-            f.request.http_version = "HTTP/1.1"
-            host = f.request.headers.pop(":authority")
-            f.request.headers.insert(0, "host", host)
-
-        rt = http_replay.RequestReplayThread(self.options, f, self.channel)
-        rt.start()  # pragma: no cover
-        if block:
-            rt.join()
-        return rt

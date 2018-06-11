@@ -15,8 +15,12 @@ Cet objet n'est pas utilisé dans l'outil mitmproxy ou mitmdump, seulement dans 
 """
 import collections
 import typing
+<<<<<<< HEAD
 import os
 import re
+=======
+
+>>>>>>> ff025ff0920c07baf7863618dff9cdd1b4361ab6
 import blinker
 import sortedcontainers
 import copy
@@ -347,6 +351,7 @@ class View(collections.Sequence):
         self._refilter()
         self.sig_store_refresh.send(self)
 
+    @command.command("view.marked.toggle")
     def add(self, flows: typing.Sequence[mitmproxy.flow.Flow]) -> None:
         """
             Adds a flow to the state. If the flow already exists, it is
@@ -412,9 +417,8 @@ class View(collections.Sequence):
         """
             Load flows into the view, without processing them with addons.
         """
-        spath = os.path.expanduser(path)
         try:
-            with open(spath, "rb") as f:
+            with open(path, "rb") as f:
                 for i in io.FlowReader(f).stream():
                     # Do this to get a new ID, so we can load the same file N times and
                     # get new flows each time. It would be more efficient to just have a

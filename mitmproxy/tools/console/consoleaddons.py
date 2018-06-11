@@ -147,7 +147,7 @@ class ConsoleAddon:
         fv = self.master.window.current("options")
         if not fv:
             raise exceptions.CommandError("Not viewing options.")
-        self.master.commands.call("options.reset.one %s" % fv.current_name())
+        self.master.commands.execute("options.reset.one %s" % fv.current_name())
 
     @command.command("console.nav.start")
     def nav_start(self) -> None:
@@ -237,7 +237,7 @@ class ConsoleAddon:
             repl = cmd + " " + " ".join(args)
             repl = repl.replace("{choice}", opt)
             try:
-                self.master.commands.call(repl)
+                self.master.commands.execute(repl)
             except exceptions.CommandError as e:
                 signals.status_message.send(message=str(e))
 
@@ -258,14 +258,14 @@ class ConsoleAddon:
             command, then invoke another command with all occurrences of {choice}
             replaced by the choice the user made.
         """
-        choices = ctx.master.commands.call_args(choicecmd, [])
+        choices = ctx.master.commands.call_strings(choicecmd, [])
 
         def callback(opt):
             # We're now outside of the call context...
             repl = shlex.quote(" ".join(args))
             repl = repl.replace("{choice}", opt)
             try:
-                self.master.commands.call(subcmd + " " + repl)
+                self.master.commands.execute(subcmd + " " + repl)
             except exceptions.CommandError as e:
                 signals.status_message.send(message=str(e))
 
@@ -287,7 +287,7 @@ class ConsoleAddon:
         """
         option_value = getattr(self.master.options, option, None)
         current_value = option_value if option_value else ""
-        self.master.commands.call(
+        self.master.commands.execute(
             "console.command set %s=%s" % (option, current_value)
         )
 
@@ -429,7 +429,7 @@ class ConsoleAddon:
         elif part == "set-cookies":
             self.master.switch_view("edit_focus_setcookies")
         elif part in ["url", "method", "status_code", "reason"]:
-            self.master.commands.call(
+            self.master.commands.execute(
                 "console.command flow.set @focus %s " % part
             )
 
@@ -514,7 +514,7 @@ class ConsoleAddon:
             raise exceptions.CommandError("Invalid flowview mode.")
 
         try:
-            self.master.commands.call_args(
+            self.master.commands.call_strings(
                 "view.setval",
                 ["@focus", "flowview_mode_%s" % idx, mode]
             )
@@ -537,7 +537,7 @@ class ConsoleAddon:
         if not fv:
             raise exceptions.CommandError("Not viewing a flow.")
         idx = fv.body.tab_offset
-        return self.master.commands.call_args(
+        return self.master.commands.call_strings(
             "view.getval",
             [
                 "@focus",

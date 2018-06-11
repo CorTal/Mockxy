@@ -142,8 +142,12 @@ class Events:
 
     def done(self):
         """
-            Called when the addon shuts down, either by being removed from the
-            mitmproxy instance, or when mitmproxy itself shuts down.
+            Called when the addon shuts down, either by being removed from
+            the mitmproxy instance, or when mitmproxy itself shuts down. On
+            shutdown, this event is called after the event loop is
+            terminated, guaranteeing that it will be the final event an addon
+            sees. Note that log handlers are shut down at this point, so
+            calls to log functions will produce no output.
         """
 
     def load(self, entry: mitmproxy.addonmanager.Loader):
@@ -165,11 +169,6 @@ class Events:
             Called when the proxy is completely up and running. At this point,
             you can expect the proxy to be bound to a port, and all addons to be
             loaded.
-        """
-
-    def tick(self):
-        """
-            A regular ticker - called approximately once every 100ms.
         """
 
     def update(self, flows: typing.Sequence[mitmproxy.flow.Flow]):

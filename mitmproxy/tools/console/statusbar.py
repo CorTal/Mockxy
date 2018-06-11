@@ -158,6 +158,7 @@ class ActionBar(urwid.WidgetWrap):
 
 
 class StatusBar(urwid.WidgetWrap):
+    REFRESHTIME = 0.5  # Timed refresh time in seconds
     keyctx = ""
 
     def __init__(
@@ -167,12 +168,17 @@ class StatusBar(urwid.WidgetWrap):
         self.ib = urwid.WidgetWrap(urwid.Text(""))
         self.ab = ActionBar(self.master)
         super().__init__(urwid.Pile([self.ib, self.ab]))
+        signals.flow_change.connect(self.sig_update)
         signals.update_settings.connect(self.sig_update)
         signals.flowlist_change.connect(self.sig_update)
         master.options.changed.connect(self.sig_update)
         master.view.focus.sig_change.connect(self.sig_update)
         master.view.sig_view_add.connect(self.sig_update)
+        self.refresh()
+
+    def refresh(self):
         self.redraw()
+        signals.call_in.send(seconds=self.REFRESHTIME, callback=self.refresh)
 
     def sig_update(self, sender, flow=None, updated=None):
         self.redraw()
@@ -183,8 +189,8 @@ class StatusBar(urwid.WidgetWrap):
     def get_status(self):
         r = []
 
-        sreplay = self.master.addons.get("serverplayback")
-        creplay = self.master.addons.get("clientplayback")
+        sreplay = self.master.commands.call("replay.server.count")
+        creplay = self.master.commands.call("replay.client.count")
 
         if len(self.master.options.setheaders):
             r.append("[")
@@ -192,14 +198,14 @@ class StatusBar(urwid.WidgetWrap):
             r.append("eaders]")
         if len(self.master.options.replacements):
             r.append("[%d replacements]" % len(self.master.options.replacements))
-        if creplay.count():
+        if creplay:
             r.append("[")
             r.append(("heading_key", "cplayback"))
-            r.append(":%s]" % creplay.count())
-        if sreplay.count():
+            r.append(":%s]" % creplay)
+        if sreplay:
             r.append("[")
             r.append(("heading_key", "splayback"))
-            r.append(":%s]" % sreplay.count())
+            r.append(":%s]" % sreplay)
         if self.master.options.ignore_hosts:
             r.append("[")
             r.append(("heading_key", "I"))

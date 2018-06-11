@@ -36,34 +36,37 @@ the repository maintainers directly for issues with native packages.
 
 ## Windows
 
-The recommended way to install mitmproxy on Windows is to download our
-binary-packages from our
-[releases](https://github.com/mitmproxy/mitmproxy/releases/latest) page.
 
-FIXME: WSL
+All the mitmproxy tools are fully supported under [WSL (Windows Subsystem for
+Linux)](https://docs.microsoft.com/en-us/windows/wsl/about). We recommend to [install WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10), and then
+follow the mitmproxy installation instructions for Linux.
+
+We also distribute native Windows packages for all tools other than the
+mitmproxy console app, which only works under WSL. To install mitmproxy on Windows,
+download the binary packages from our
+[releases](https://github.com/mitmproxy/mitmproxy/releases/latest) page. 
 
 After installation, you'll find shortcuts for mitmweb and mitmdump in the start
 menu. Both executables are added to your PATH and can be invoked from the
-command line. The console interface is not supported on native Windows.
+command line.
 
 
 # Advanced Installation
 
 ## Self-contained Pre-built Binary Packages
 
-For some platforms we provide pre-built binary packages containing
-ready-to-run executables. This includes a self-contained Python 3
-environment, a recent OpenSSL that support ALPN and HTTP/2, and other
-dependencies that would otherwise we cumbersome to compile and install.
+For some platforms we provide pre-built binary packages containing ready-to-run
+executables. This includes a self-contained Python 3 environment, a recent
+OpenSSL that support ALPN and HTTP/2, and other dependencies that would
+otherwise be cumbersome to compile and install.
 
-Please be advised that we do not update these binaries after the initial
-release. This means we do not include security-related updates of our
-dependencies in already released mitmproxy versions. If there is a
-severe issue, we might consider releasing a bugfix release of mitmproxy
-and corresponding binary packages.
+Dependencies in the binary packages are frozen on release, and can't be updated
+in situ. This means that we necessarily capture any bugs or security issues that
+may be present. We don't generally release new binary packages simply to update
+dependencies (though we may do so if we become aware of a really serious issue).
+If you use our binary packages, please make sure you update regularly to ensure
+that everything remains current.
 
-We only support the latest version of mitmproxy with bugfix and security
-updates through regular minor releases.
 
 ## Docker Images
 
