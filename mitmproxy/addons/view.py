@@ -15,12 +15,10 @@ Cet objet n'est pas utilisé dans l'outil mitmproxy ou mitmdump, seulement dans 
 """
 import collections
 import typing
-<<<<<<< HEAD
+
 import os
 import re
-=======
 
->>>>>>> ff025ff0920c07baf7863618dff9cdd1b4361ab6
 import blinker
 import sortedcontainers
 import copy
@@ -660,7 +658,7 @@ class View(collections.Sequence):
         self.mock = not self.mock
         if self.mock:
             for flow in self.scenarios[self.scenario][0]:
-                self.scenarios[self.scenario][1][flow.id].readyToMock(flow, ctx.options.default_matcher_mode)
+                self.scenarios[self.scenario][1][flow.id].readyToMock(flow, ctx.options.default_matcher_mode, self.defaults)
         else:
             for flow in self.scenarios[self.scenario][0]:
                 if self.scenarios[self.scenario][1][flow.id].isDefault():
@@ -839,7 +837,7 @@ class Matcher():
         default = not isinstance(self.rules["Content"],list) and not isinstance(self.rules["Headers"],list) and not isinstance(self.rules["URI"],list)
         return empty or default
 
-    def readyToMock(self, flow, default_matcher_mode):
+    def readyToMock(self, flow, default_matcher_mode, defaults):
         if self.isDefault():
             self.rules["Headers"] = flow.request.headers.copy()
             try:
@@ -848,10 +846,10 @@ class Matcher():
             except Exception as e:
                 self.rules["Content"] = flow.request.content.decode()
             self.rules["URI"] = flow.request.pretty_url
-            if default_matcher_mode != "all" and default_matcher_mode in self.defaults:
-                for header in self.defaults[default_matcher_mode]['Headers']:
+            if default_matcher_mode != "all" and default_matcher_mode in defaults:
+                for header in defaults[default_matcher_mode]['Headers']:
                     self.rules["Headers"].pop(header, None)
-                for contents in self.defaults[default_matcher_mode]['Content']:
+                for contents in defaults[default_matcher_mode]['Content']:
                     if isinstance(self.rules["Content"],str):
                         params = parse_qs(self.rules["Content"])
                         params.pop(contents, None)
@@ -861,7 +859,7 @@ class Matcher():
                         for res in result:
                             parent = res.getparent()
                             parent.remove(res)
-                for uris in self.defaults[default_matcher_mode]['URI']:
+                for uris in defaults[default_matcher_mode]['URI']:
                     if uris in self.rules["URI"]:
                         #base_uri = uri
                         pass

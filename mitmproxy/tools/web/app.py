@@ -119,7 +119,7 @@ class APIError(tornado.web.HTTPError):
     pass
 
 
-class RequestHandler(tornado.web.RequestHandler):      
+class RequestHandler(tornado.web.RequestHandler):
     def write(self, chunk):
         # Writing arrays on the top level is ok nowadays.
         # http://flask.pocoo.org/docs/0.11/security/#json-security
@@ -207,11 +207,10 @@ class RequestHandler(tornado.web.RequestHandler):
         if(ctx.options.default_route_to_web != '' and ctx.options.default_route_to_web not in self.request.full_url()):
             print(self.request.full_url())
             self.request.path = ctx.options.default_route_to_web + self.request.path
-            #url = self.request.protocol + "://" + self.request.host + ctx.options.default_route_to_web + self.request.path + self.request.query
             print(self.request.full_url())
-          
-                
-        
+
+
+
 
 class IndexHandler(RequestHandler):
     def prepare(self):

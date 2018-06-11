@@ -14,11 +14,8 @@ from mitmproxy.net.http import status_codes
 import mitmproxy.types
 
 
-<<<<<<< HEAD
 CA_DIR = "~\.mitmproxy"
-=======
-CONF_DIR = "~/.mitmproxy"
->>>>>>> ff025ff0920c07baf7863618dff9cdd1b4361ab6
+CONF_DIR = "~\.mitmproxy"
 LISTEN_PORT = 8080
 
 
