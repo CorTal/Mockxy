@@ -13,6 +13,7 @@ import mitmproxy.flow
 import tornado.escape
 import tornado.web
 import tornado.websocket
+from mitmproxy import ctx
 from mitmproxy import contentviews
 from mitmproxy import exceptions
 from mitmproxy import flowfilter
@@ -118,7 +119,7 @@ class APIError(tornado.web.HTTPError):
     pass
 
 
-class RequestHandler(tornado.web.RequestHandler):
+class RequestHandler(tornado.web.RequestHandler):      
     def write(self, chunk):
         # Writing arrays on the top level is ok nowadays.
         # http://flask.pocoo.org/docs/0.11/security/#json-security
@@ -201,12 +202,25 @@ class RequestHandler(tornado.web.RequestHandler):
         else:
             super().write_error(status_code, **kwargs)
 
+    def prepare(self):
+
+        if(ctx.options.default_route_to_web != '' and ctx.options.default_route_to_web not in self.request.full_url()):
+            print(self.request.full_url())
+            self.request.path = ctx.options.default_route_to_web + self.request.path
+            #url = self.request.protocol + "://" + self.request.host + ctx.options.default_route_to_web + self.request.path + self.request.query
+            print(self.request.full_url())
+          
+                
+        
 
 class IndexHandler(RequestHandler):
+    def prepare(self):
+        pass
     def get(self):
         token = self.xsrf_token  # https://github.com/tornadoweb/tornado/issues/645
         assert token
-        self.render("index.html")
+        print(self.request.protocol + "://" + self.request.host + self.request.path + self.request.query)
+        self.render("index.html", route=ctx.options.default_route_to_web)
 
 
 class FilterHelp(RequestHandler):

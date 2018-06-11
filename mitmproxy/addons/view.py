@@ -212,6 +212,10 @@ class View(collections.Sequence):
             "default_matcher_file", str, "~/.mitmproxy/defaults",
             "Default Matcher File (~/.mitmproxy/defaults by default)"
         )
+        loader.add_option(
+            "default_route_to_web", str, "",
+            "Default route to access mitmweb on top of host (empty by default)"
+        )
 
     def store_count(self):
         return len(self._store)

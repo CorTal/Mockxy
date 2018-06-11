@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>mitmproxy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/MOXY/static/vendor.css"/>
+    <link rel="stylesheet" href="/static/vendor.css"/>
     <link rel="stylesheet" href="/MOXY/static/app.css"/>
     <link rel="icon" href="/MOXY/static/images/favicon.ico" type="image/x-icon"/>
     <script src="/MOXY/static/static.js"></script>
@@ -13,5 +13,10 @@
 </head>
 <body>
 <div id="mitmproxy"></div>
+{% if obj %}
+<div>COUCOU</div>
+{% else %}
+<idv>PAS COUCOU</div>
+{% end %}
 </body>
 </html>

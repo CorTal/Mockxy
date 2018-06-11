@@ -16,7 +16,7 @@ export default class WebsocketBackend {
     }
 
     connect() {
-        this.socket = new WebSocket(location.origin.replace('http', 'ws') + '/updates')
+        this.socket = new WebSocket(location.origin.replace('http', 'ws') + '/MOXY/updates')
         this.socket.addEventListener('open', () => this.onOpen())
         this.socket.addEventListener('close', event => this.onClose(event))
         this.socket.addEventListener('message', msg => this.onMessage(JSON.parse(msg.data)))

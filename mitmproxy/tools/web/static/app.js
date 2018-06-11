@@ -1,4 +1,4 @@
-(function(){function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}return e})()({1:[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -169,10 +169,6 @@ process.off = noop;
 process.removeListener = noop;
 process.removeAllListeners = noop;
 process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
 
 process.binding = function (name) {
     throw new Error('process.binding is not supported');
@@ -357,7 +353,7 @@ var WebsocketBackend = function () {
         value: function connect() {
             var _this = this;
 
-            this.socket = new WebSocket(location.origin.replace('http', 'ws') + '/updates');
+            this.socket = new WebSocket(location.origin.replace('http', 'ws') + '/MOXY/updates');
             this.socket.addEventListener('open', function () {
                 return _this.onOpen();
             });
@@ -556,6 +552,10 @@ var _reactCodemirror = require('react-codemirror');
 
 var _reactCodemirror2 = _interopRequireDefault(_reactCodemirror);
 
+var _vkbeautify = require('vkbeautify');
+
+var _vkbeautify2 = _interopRequireDefault(_vkbeautify);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 CodeEditor.propTypes = {
@@ -571,6 +571,8 @@ function CodeEditor(_ref) {
     var options = {
         lineNumbers: true
     };
+    content = _vkbeautify2.default.xml(content);
+    console.log(content);
     return _react2.default.createElement(
         'div',
         { className: 'codeeditor', onKeyDown: function onKeyDown(e) {
@@ -580,7 +582,7 @@ function CodeEditor(_ref) {
     );
 }
 
-},{"prop-types":"prop-types","react":"react","react-codemirror":"react-codemirror"}],7:[function(require,module,exports){
+},{"prop-types":"prop-types","react":"react","react-codemirror":"react-codemirror","vkbeautify":"vkbeautify"}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -860,6 +862,7 @@ function Edit(_ref2) {
     var content = _ref2.content,
         onChange = _ref2.onChange;
 
+    console.log(content);
     return _react2.default.createElement(_CodeEditor2.default, { content: content, onChange: onChange });
 }
 exports.Edit = Edit = (0, _ContentLoader2.default)(Edit);
@@ -889,11 +892,12 @@ var PureViewServer = exports.PureViewServer = function (_Component) {
         key: 'setContentView',
         value: function setContentView(props) {
             try {
+                console.log(props.content);
                 this.data = JSON.parse(props.content);
+                console.log(this.data);
             } catch (err) {
                 this.data = { lines: [], description: err.message };
             }
-
             props.setContentViewDescription(props.contentView != this.data.description ? this.data.description : '');
             props.setContent(this.data.lines);
         }
@@ -907,6 +911,7 @@ var PureViewServer = exports.PureViewServer = function (_Component) {
                 maxLines = _props.maxLines;
 
             var lines = this.props.showFullContent ? this.data.lines : this.data.lines.slice(0, maxLines);
+            console.log(lines);
             return _react2.default.createElement(
                 'div',
                 null,
@@ -1709,7 +1714,8 @@ var FlowTable = function (_React$Component) {
                 flows = _props2.flows,
                 selected = _props2.selected,
                 highlight = _props2.highlight,
-                matcher = _props2.matcher;
+                matcher = _props2.matcher,
+                index = _props2.index;
 
 
             return _react2.default.createElement(
@@ -1734,7 +1740,8 @@ var FlowTable = function (_React$Component) {
                                 selected: flow === selected,
                                 highlighted: flow.id === highlight,
                                 onSelect: _this2.props.selectFlow,
-                                matcher: matcher[flow.id]
+                                matcher: matcher[flow.id],
+                                index: index[flow.id]
                             });
                         }),
                         _react2.default.createElement('tr', { style: { height: vScroll.paddingBottom } })
@@ -1753,7 +1760,8 @@ FlowTable.propTypes = {
     rowHeight: _propTypes2.default.number,
     highlight: _propTypes2.default.string,
     selected: _propTypes2.default.object,
-    matcher: _propTypes2.default.object
+    matcher: _propTypes2.default.object,
+    index: _propTypes2.default.object
 };
 FlowTable.defaultProps = {
     rowHeight: 32
@@ -1765,7 +1773,8 @@ exports.default = (0, _reactRedux.connect)(function (state) {
         flows: state.flows.view,
         highlight: state.flows.highlight,
         selected: state.flows.byId[state.flows.selected[0]],
-        matcher: state.flows.RuleById
+        matcher: state.flows.RuleById,
+        index: state.flows.listIndex
     };
 }, {
     selectFlow: flowsActions.select
@@ -1777,9 +1786,11 @@ exports.default = (0, _reactRedux.connect)(function (state) {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.IndexColumn = IndexColumn;
 exports.TLSColumn = TLSColumn;
 exports.IconColumn = IconColumn;
 exports.PathColumn = PathColumn;
+exports.LibelleColumn = LibelleColumn;
 exports.MatchingColumn = MatchingColumn;
 exports.ResponseColumn = ResponseColumn;
 
@@ -1795,15 +1806,35 @@ var _propTypes = require('prop-types');
 
 var _propTypes2 = _interopRequireDefault(_propTypes);
 
+var _xpath = require('xpath');
+
+var _xpath2 = _interopRequireDefault(_xpath);
+
 var _utils = require('../../flow/utils.js');
 
 var _utils2 = require('../../utils.js');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function TLSColumn(_ref) {
+function IndexColumn(_ref) {
     var flow = _ref.flow,
-        matcher = _ref.matcher;
+        matcher = _ref.matcher,
+        index = _ref.index;
+
+    return _react2.default.createElement(
+        'td',
+        { className: (0, _classnames2.default)('col-index') },
+        index
+    );
+}
+
+IndexColumn.headerClass = 'col-index';
+IndexColumn.headerName = 'Index';
+
+function TLSColumn(_ref2) {
+    var flow = _ref2.flow,
+        matcher = _ref2.matcher,
+        index = _ref2.index;
 
     return _react2.default.createElement('td', { className: (0, _classnames2.default)('col-tls', flow.request.scheme === 'https' ? 'col-tls-https' : 'col-tls-http') });
 }
@@ -1811,9 +1842,10 @@ function TLSColumn(_ref) {
 TLSColumn.headerClass = 'col-tls';
 TLSColumn.headerName = '';
 
-function IconColumn(_ref2) {
-    var flow = _ref2.flow,
-        matcher = _ref2.matcher;
+function IconColumn(_ref3) {
+    var flow = _ref3.flow,
+        matcher = _ref3.matcher,
+        index = _ref3.index;
 
     return _react2.default.createElement(
         'td',
@@ -1855,9 +1887,10 @@ IconColumn.getIcon = function (flow) {
     return 'resource-icon-plain';
 };
 
-function PathColumn(_ref3) {
-    var flow = _ref3.flow,
-        matcher = _ref3.matcher;
+function PathColumn(_ref4) {
+    var flow = _ref4.flow,
+        matcher = _ref4.matcher,
+        index = _ref4.index;
 
 
     var err = void 0;
@@ -1881,9 +1914,26 @@ function PathColumn(_ref3) {
 PathColumn.headerClass = 'col-path';
 PathColumn.headerName = 'Path';
 
-function MatchingColumn(_ref4) {
-    var flow = _ref4.flow,
-        matcher = _ref4.matcher;
+function LibelleColumn(_ref5) {
+    var flow = _ref5.flow,
+        matcher = _ref5.matcher,
+        index = _ref5.index;
+
+
+    return _react2.default.createElement(
+        'td',
+        { className: 'col-libelle' },
+        flow.request.libelle ? flow.request.libelle : flow.request.path
+    );
+}
+
+LibelleColumn.headerClass = 'col-libelle';
+LibelleColumn.headerName = 'Libellé';
+
+function MatchingColumn(_ref6) {
+    var flow = _ref6.flow,
+        matcher = _ref6.matcher,
+        index = _ref6.index;
 
     return _react2.default.createElement(
         'td',
@@ -1895,9 +1945,10 @@ function MatchingColumn(_ref4) {
 MatchingColumn.headerClass = 'col-match';
 MatchingColumn.headerName = 'Match';
 
-function ResponseColumn(_ref5) {
-    var flow = _ref5.flow,
-        matcher = _ref5.matcher;
+function ResponseColumn(_ref7) {
+    var flow = _ref7.flow,
+        matcher = _ref7.matcher,
+        index = _ref7.index;
 
     return _react2.default.createElement(
         'td',
@@ -1960,14 +2011,14 @@ export function TimeColumn({ flow }) {
 TimeColumn.headerClass = 'col-time'
 TimeColumn.headerName = 'Time'
 */
-exports.default = [TLSColumn, IconColumn, PathColumn, MatchingColumn, ResponseColumn
+exports.default = [TLSColumn, IndexColumn, IconColumn, PathColumn, LibelleColumn, MatchingColumn, ResponseColumn
 /*MethodColumn,
 StatusColumn,
 SizeColumn,
 TimeColumn,*/
 ];
 
-},{"../../flow/utils.js":75,"../../utils.js":77,"classnames":"classnames","prop-types":"prop-types","react":"react"}],19:[function(require,module,exports){
+},{"../../flow/utils.js":75,"../../utils.js":77,"classnames":"classnames","prop-types":"prop-types","react":"react","xpath":"xpath"}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2007,7 +2058,8 @@ function FlowRow(_ref) {
         selected = _ref.selected,
         highlighted = _ref.highlighted,
         onSelect = _ref.onSelect,
-        matcher = _ref.matcher;
+        matcher = _ref.matcher,
+        index = _ref.index;
 
     var className = (0, _classnames2.default)({
         'selected': selected,
@@ -2016,14 +2068,13 @@ function FlowRow(_ref) {
         'has-request': flow.request,
         'has-response': flow.response
     });
-    console.log(matcher);
     return _react2.default.createElement(
         'tr',
         { className: className, onClick: function onClick() {
                 return onSelect(flow.id);
             } },
         _FlowColumns2.default.map(function (Column) {
-            return _react2.default.createElement(Column, { key: Column.name, flow: flow, matcher: matcher });
+            return _react2.default.createElement(Column, { key: Column.name, flow: flow, matcher: matcher, index: index });
         })
     );
 }
@@ -3026,6 +3077,10 @@ var _reactInputRange = require('react-input-range');
 
 var _reactInputRange2 = _interopRequireDefault(_reactInputRange);
 
+var _vkbeautify = require('vkbeautify');
+
+var _vkbeautify2 = _interopRequireDefault(_vkbeautify);
+
 var _utils = require('../../flow/utils.js');
 
 var _utils2 = require('../../utils.js');
@@ -3222,7 +3277,7 @@ var Request = exports.Request = function (_Component) {
                         readonly: !isEdit,
                         flow: flow,
                         onContentChange: function onContentChange(content) {
-                            return updateFlow({ request: { content: content } });
+                            _vkbeautify2.default.xmlmin(content);updateFlow({ request: { content: content } });
                         },
                         message: flow.request })
                 ),
@@ -3349,7 +3404,7 @@ function ErrorView(_ref3) {
     );
 }
 
-},{"../../ducks/flows":63,"../../ducks/ui/flow":67,"../../flow/utils.js":75,"../../utils.js":77,"../ContentView":5,"../ContentView/ContentViewOptions":8,"../ValueEditor/ValidateEditor":48,"../ValueEditor/ValueEditor":49,"../common/Button":50,"../common/HideInStatic":54,"../common/Input":55,"./Headers":23,"./RuleTable":28,"./ToggleEdit":29,"prop-types":"prop-types","react":"react","react-input-range":"react-input-range","react-modal":"react-modal","react-redux":"react-redux"}],26:[function(require,module,exports){
+},{"../../ducks/flows":63,"../../ducks/ui/flow":67,"../../flow/utils.js":75,"../../utils.js":77,"../ContentView":5,"../ContentView/ContentViewOptions":8,"../ValueEditor/ValidateEditor":48,"../ValueEditor/ValueEditor":49,"../common/Button":50,"../common/HideInStatic":54,"../common/Input":55,"./Headers":23,"./RuleTable":28,"./ToggleEdit":29,"prop-types":"prop-types","react":"react","react-input-range":"react-input-range","react-modal":"react-modal","react-redux":"react-redux","vkbeautify":"vkbeautify"}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7523,6 +7578,10 @@ var _filt = require("../filt/filt");
 
 var _filt2 = _interopRequireDefault(_filt);
 
+var _vkbeautify = require("vkbeautify");
+
+var _vkbeautify2 = _interopRequireDefault(_vkbeautify);
+
 var _edit = require("./edit");
 
 var _utils2 = require("../flow/utils");
@@ -7678,6 +7737,7 @@ var sortKeyFuns = {
         }
         return total;
     }
+
 };
 
 function makeFilter(filter) {
@@ -7908,7 +7968,7 @@ function deleteRule(label, index, id, rulesLength) {
     return { type: RULE_DELETE, label: label, index: index, id: id, rulesLength: rulesLength };
 }
 
-},{"../filt/filt":74,"../flow/utils":75,"../utils":77,"./edit":61,"./utils/store":73}],64:[function(require,module,exports){
+},{"../filt/filt":74,"../flow/utils":75,"../utils":77,"./edit":61,"./utils/store":73,"vkbeautify":"vkbeautify"}],64:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8222,7 +8282,6 @@ function reducer() {
       if (state.selectedMatcher[action.label] > 0) state.selectedMatcher[action.label] = state.selectedMatcher[action.label] - 1;
       return _extends({}, state);
     case flowsActions.RULE_DOWN:
-      console.log(action.rulesLength - 1);
       if (state.selectedMatcher[action.label] < action.rulesLength - 1) state.selectedMatcher[action.label] = state.selectedMatcher[action.label] + 1;
       return _extends({}, state);
     case flowsActions.RULE_DELETE:
@@ -8385,8 +8444,6 @@ function editRule(rules, index, matcher) {
 }
 
 function validateRule(id, rule) {
-  console.log(id);
-  console.log(rule);
   return flowsActions.updateRule(id, rule);
 }
 
