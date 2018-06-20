@@ -4,13 +4,8 @@ from mitmproxy import optmanager
 from mitmproxy.net import tls
 
 
-<<<<<<< HEAD
 CA_DIR = "~/.mitmproxy"
 LISTEN_PORT = 3120
-=======
-CONF_DIR = "~/.mitmproxy"
-LISTEN_PORT = 8080
->>>>>>> ff025ff0920c07baf7863618dff9cdd1b4361ab6
 
 
 class Options(optmanager.OptManager):
